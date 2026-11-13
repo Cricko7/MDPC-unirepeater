@@ -24,12 +24,14 @@ const alarmTypes = {
 const alarmSources = new Map([["R1", "R1 · Репитер"], ...zones.map(zone =>
   [zone.id, `${zone.id} · ${zone.name}`])]);
 const historyStorageKey = "mdpc.monitor.alarmHistory.v1";
+const historyPageSize = 10;
 const elements = Object.fromEntries([
   "scenario", "refresh", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
   "history-status", "history-from", "history-to", "history-sort", "history-filters", "history-reset",
+  "history-pagination", "history-prev", "history-next", "history-page",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -42,6 +44,7 @@ const historyTimeFormat = new Intl.DateTimeFormat("ru-RU", {
   hour: "2-digit", minute: "2-digit", second: "2-digit",
 });
 const savedHistory = loadAlarmHistory();
+let historyPage = 1;
 const alarmHistory = savedHistory.entries;
 const openAlarms = new Map(alarmHistory.filter(entry => entry.recoveredAt === null)
   .map(entry => [alarmKey(entry), entry]));
@@ -270,7 +273,16 @@ function renderAlarmHistory() {
   const count = invalidPeriod ? "Проверьте даты" : `Записей: ${rows.length} из ${alarmHistory.length}`;
   const counter = elements["history-count"];
   if (counter.textContent !== count) counter.textContent = count;
-  elements["history-rows"].innerHTML = rows.length ? rows.map(entry => `
+  const pageCount = Math.max(1, Math.ceil(rows.length / historyPageSize));
+  historyPage = Math.max(1, Math.min(historyPage, pageCount));
+  const firstRow = (historyPage - 1) * historyPageSize;
+  const pageRows = rows.slice(firstRow, firstRow + historyPageSize);
+  elements["history-pagination"].hidden = pageCount === 1;
+  elements["history-prev"].disabled = historyPage === 1;
+  elements["history-next"].disabled = historyPage === pageCount;
+  const pageLabel = `Страница ${historyPage} из ${pageCount}`;
+  if (elements["history-page"].textContent !== pageLabel) elements["history-page"].textContent = pageLabel;
+  elements["history-rows"].innerHTML = pageRows.length ? pageRows.map(entry => `
     <tr>
       <td><strong>${entry.title}</strong><small>${entry.source}</small></td>
       <td><span class="status ${entry.level}"><i aria-hidden="true"></i>${severityLabels[entry.level]}</span></td>
@@ -279,6 +291,11 @@ function renderAlarmHistory() {
     </tr>`).join("") : `<tr><td colspan="4" class="history-empty">${invalidPeriod
       ? "Дата «С» должна быть раньше даты «По» или совпадать с ней."
       : alarmHistory.length ? "Нет записей по выбранным фильтрам." : "Тревоги пока не зарегистрированы."}</td></tr>`;
+}
+
+function showFirstHistoryPage() {
+  historyPage = 1;
+  renderAlarmHistory();
 }
 
 function exportAlarmHistory() {
@@ -440,17 +457,25 @@ historyZone.add(new Option("R1 · Репитер", "R1"));
 for (const zone of zones) {
   historyZone.add(new Option(`${zone.id} · ${zone.name}`, zone.id));
 }
-historyZone.addEventListener("change", renderAlarmHistory);
-elements["history-level"].addEventListener("change", renderAlarmHistory);
-elements["history-status"].addEventListener("change", renderAlarmHistory);
-elements["history-from"].addEventListener("input", renderAlarmHistory);
-elements["history-to"].addEventListener("input", renderAlarmHistory);
+historyZone.addEventListener("change", showFirstHistoryPage);
+elements["history-level"].addEventListener("change", showFirstHistoryPage);
+elements["history-status"].addEventListener("change", showFirstHistoryPage);
+elements["history-from"].addEventListener("input", showFirstHistoryPage);
+elements["history-to"].addEventListener("input", showFirstHistoryPage);
 const historySort = elements["history-sort"];
-historySort.addEventListener("change", renderAlarmHistory);
+historySort.addEventListener("change", showFirstHistoryPage);
 elements["history-reset"].addEventListener("click", () => {
   const sortOrder = historySort.value;
   elements["history-filters"].reset();
   historySort.value = sortOrder;
+  showFirstHistoryPage();
+});
+elements["history-prev"].addEventListener("click", () => {
+  historyPage -= 1;
+  renderAlarmHistory();
+});
+elements["history-next"].addEventListener("click", () => {
+  historyPage += 1;
   renderAlarmHistory();
 });
 elements["history-export"].addEventListener("click", exportAlarmHistory);

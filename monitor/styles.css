@@ -164,7 +164,7 @@ tr.selected { background: #25302a; }
 .history-date-fields label { display: flex; align-items: center; }
 .history-date-fields input[aria-invalid="true"] { border-color: var(--red); }
 .history-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.history-actions button {
+.history-actions button, .history-pagination button {
   min-height: 39px; padding: 6px 12px;
   border: 1px solid var(--line); border-radius: 8px; font-weight: 650; font-size: .85rem;
 }
@@ -173,6 +173,15 @@ tr.selected { background: #25302a; }
 .history-export { background: var(--green); color: #142110; }
 .history-export:hover:enabled { background: #d2ffa8; }
 .history-export:disabled { cursor: default; background: #202827; color: var(--muted); border-color: var(--line); }
+.history-pagination {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+  gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line);
+}
+.history-pagination[hidden] { display: none; }
+.history-pagination button { background: #202827; color: inherit; }
+.history-pagination button:hover:enabled { background: #2d3835; }
+.history-pagination button:disabled { opacity: .55; cursor: default; }
+.history-pagination span { color: var(--muted); font-size: .8rem; }
 .history-scroll { border-radius: 0 0 14px 14px; }
 .history-scroll:focus-visible { outline-offset: -2px; }
 .alarm-history th, .alarm-history td { white-space: normal; }

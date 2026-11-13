@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#121616">
   <title>Мониторинг связи · МЦОД Датарк</title>
-  <link rel="stylesheet" href="styles.css?v=alarm-reset-1">
-  <script src="monitor.js?v=alarm-sort-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=alarm-pages-1">
+  <script src="monitor.js?v=alarm-pages-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -136,6 +136,11 @@
           <tbody id="history-rows"></tbody>
         </table>
       </div>
+      <nav class="history-pagination" id="history-pagination" aria-label="Страницы журнала тревог" hidden>
+        <button id="history-prev" type="button" aria-label="Предыдущая страница" disabled>Назад</button>
+        <span id="history-page" role="status"></span>
+        <button id="history-next" type="button" aria-label="Следующая страница" disabled>Вперёд</button>
+      </nav>
     </section>
     <footer><span>Интервал симуляции · 15 с</span><time id="updated"></time></footer>
     <p class="sr-only" id="announcement" role="status"></p>
