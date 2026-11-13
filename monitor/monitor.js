@@ -29,7 +29,7 @@ const elements = Object.fromEntries([
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
-  "history-from", "history-to",
+  "history-status", "history-from", "history-to",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -241,6 +241,7 @@ function dateInputKey(input) {
 function filteredAlarmHistory() {
   const source = elements["history-zone"].value;
   const level = elements["history-level"].value;
+  const status = elements["history-status"].value;
   const from = dateInputKey(elements["history-from"]);
   const to = dateInputKey(elements["history-to"]);
   const invalidPeriod = from !== null && to !== null && from > to;
@@ -248,6 +249,8 @@ function filteredAlarmHistory() {
 
   const rows = alarmHistory.filter(entry => {
     if ((source && entry.sourceId !== source) || (level && entry.level !== level)) return false;
+    const entryStatus = entry.recoveredAt === null ? "active" : "recovered";
+    if (status && entryStatus !== status) return false;
     if (from === null && to === null) return true;
     const date = new Date(entry.occurredAt);
     const day = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
@@ -437,6 +440,7 @@ for (const zone of zones) {
 }
 historyZone.addEventListener("change", renderAlarmHistory);
 elements["history-level"].addEventListener("change", renderAlarmHistory);
+elements["history-status"].addEventListener("change", renderAlarmHistory);
 elements["history-from"].addEventListener("input", renderAlarmHistory);
 elements["history-to"].addEventListener("input", renderAlarmHistory);
 elements["history-export"].addEventListener("click", exportAlarmHistory);

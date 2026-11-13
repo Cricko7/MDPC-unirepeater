@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#121616">
   <title>Мониторинг связи · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css?v=alarm-period-1">
-  <script src="monitor.js?v=alarm-period-1" defer></script>
+  <script src="monitor.js?v=alarm-status-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -98,6 +98,13 @@
             <option value="">Все уровни</option>
             <option value="critical">Критическая</option>
             <option value="warning">Предупреждение</option>
+          </select>
+        </label>
+        <label for="history-status">Статус
+          <select id="history-status">
+            <option value="">Все</option>
+            <option value="active">Активные</option>
+            <option value="recovered">Восстановленные</option>
           </select>
         </label>
         <fieldset class="history-period" aria-describedby="history-period-hint">
