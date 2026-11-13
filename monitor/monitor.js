@@ -24,14 +24,13 @@ const alarmTypes = {
 const alarmSources = new Map([["R1", "R1 · Репитер"], ...zones.map(zone =>
   [zone.id, `${zone.id} · ${zone.name}`])]);
 const historyStorageKey = "mdpc.monitor.alarmHistory.v1";
-const historyPageSize = 10;
 const elements = Object.fromEntries([
   "scenario", "refresh", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
   "history-status", "history-from", "history-to", "history-sort", "history-filters", "history-reset",
-  "history-pagination", "history-prev", "history-next", "history-page",
+  "history-pagination", "history-prev", "history-next", "history-page", "history-page-size",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -273,10 +272,11 @@ function renderAlarmHistory() {
   const count = invalidPeriod ? "Проверьте даты" : `Записей: ${rows.length} из ${alarmHistory.length}`;
   const counter = elements["history-count"];
   if (counter.textContent !== count) counter.textContent = count;
-  const pageCount = Math.max(1, Math.ceil(rows.length / historyPageSize));
+  const pageSize = Number(elements["history-page-size"].value);
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   historyPage = Math.max(1, Math.min(historyPage, pageCount));
-  const firstRow = (historyPage - 1) * historyPageSize;
-  const pageRows = rows.slice(firstRow, firstRow + historyPageSize);
+  const firstRow = (historyPage - 1) * pageSize;
+  const pageRows = rows.slice(firstRow, firstRow + pageSize);
   elements["history-pagination"].hidden = pageCount === 1;
   elements["history-prev"].disabled = historyPage === 1;
   elements["history-next"].disabled = historyPage === pageCount;
@@ -464,6 +464,7 @@ elements["history-from"].addEventListener("input", showFirstHistoryPage);
 elements["history-to"].addEventListener("input", showFirstHistoryPage);
 const historySort = elements["history-sort"];
 historySort.addEventListener("change", showFirstHistoryPage);
+elements["history-page-size"].addEventListener("change", showFirstHistoryPage);
 elements["history-reset"].addEventListener("click", () => {
   const sortOrder = historySort.value;
   elements["history-filters"].reset();
