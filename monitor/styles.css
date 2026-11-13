@@ -59,6 +59,7 @@ p { line-height: 1.5; }
 .refresh { color: #142110; background: var(--green); font-weight: 700; }
 .refresh:hover { background: #d2ffa8; }
 .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.budget-link { margin-bottom: 16px; font-size: .9rem; }
 .tile, .panel { border: 1px solid var(--line); background: var(--panel); border-radius: 14px; }
 .tile { min-width: 0; padding: 17px; }
 .tile > span, .tile > small { display: block; font-size: .8rem; color: var(--muted); }

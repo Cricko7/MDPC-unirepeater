@@ -1,0 +1,18 @@
+{
+  "rsrp_target_dbm": -100,
+  "design_reserve_db": 0,
+  "operators": [
+    {"name": "МТС", "band": "B1", "bandwidth_mhz": 10, "das_dl_dbm": 16},
+    {"name": "МегаФон", "band": "B1", "bandwidth_mhz": 10, "das_dl_dbm": 16},
+    {"name": "билайн", "band": "B1", "bandwidth_mhz": 10, "das_dl_dbm": 16},
+    {"name": "t2", "band": "B1", "bandwidth_mhz": 10, "das_dl_dbm": 16},
+    {"name": "МОТИВ", "band": "B3", "bandwidth_mhz": 10, "das_dl_dbm": 16}
+  ],
+  "zones": [
+    {"id": "A1", "cable_m": 15, "distance_m": 11.5, "splitter_db": 10, "zone_loss_db": 12},
+    {"id": "A2", "cable_m": 14, "distance_m": 11.8, "splitter_db": 10, "zone_loss_db": 12},
+    {"id": "A3", "cable_m": 19, "distance_m": 12, "splitter_db": 3.4, "zone_loss_db": 12},
+    {"id": "A4", "cable_m": 15, "distance_m": 9.7, "splitter_db": 10, "zone_loss_db": 14},
+    {"id": "A5", "cable_m": 6, "distance_m": 3.8, "splitter_db": 10, "zone_loss_db": 10}
+  ]
+}

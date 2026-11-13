@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121616">
+  <title>Бюджет радиолинии · МЦОД Датарк</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="budget.css">
+  <script src="budget.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <div class="brand"><span class="brand-icon" aria-hidden="true">▂▅▇</span><div><strong>МЦОД Датарк</strong><span>Проектирование покрытия</span></div></div>
+      <a href="index.html">К мониторингу</a>
+    </div>
+  </header>
+  <main class="shell budget">
+    <header class="page-heading">
+      <div><h1>Бюджет радиолинии</h1><p>Расчёт RSRP для пяти операторов и пяти зон</p></div>
+    </header>
+    <section class="panel" aria-labelledby="carriers-title">
+      <header class="panel-heading">
+        <div><h2 id="carriers-title">Несущие LTE</h2><p>Мощность каждой несущей задаётся на общем входе DAS после узла объединения.</p></div>
+      </header>
+      <p class="budget-hint" id="frequency-hint">Пустая частота использует верхнюю границу диапазона для оценки потерь. Указанная частота считается центром несущей DL.</p>
+      <form id="budget-carriers" class="table-scroll">
+        <table>
+          <thead><tr><th scope="col">Оператор</th><th scope="col">Диапазон</th><th scope="col">Частота DL, МГц</th><th scope="col">Ширина, МГц</th><th scope="col">Мощность, дБм</th></tr></thead>
+          <tbody id="carrier-rows"></tbody>
+        </table>
+      </form>
+      <p class="budget-hint warning" id="budget-errors" role="status"></p>
+    </section>
+    <section class="panel" aria-labelledby="result-title">
+      <header class="panel-heading">
+        <div><h2 id="result-title">Покрытие по зонам</h2><p id="budget-target"></p></div>
+        <span class="budget-total" id="budget-total"></span>
+      </header>
+      <p class="budget-hint" id="budget-summary" role="status"></p>
+      <div class="table-scroll" role="region" aria-label="Матрица расчётного покрытия" tabindex="0">
+        <table id="budget-results"></table>
+      </div>
+    </section>
+    <p class="budget-note">Начальные значения взяты из предварительного сценария. SINR, VoLTE и совместимость с аварийными SMS проверяются отдельно.</p>
+  </main>
+</body>
+</html>
