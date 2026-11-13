@@ -245,6 +245,7 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
   const list = document.getElementById("budget-scenario-list");
   const saveButton = document.getElementById("budget-scenario-save");
   const loadButton = document.getElementById("budget-scenario-load");
+  const copyButton = document.getElementById("budget-scenario-copy");
   const renameButton = document.getElementById("budget-scenario-rename");
   const deleteButton = document.getElementById("budget-scenario-delete");
   const status = document.getElementById("budget-scenario-status");
@@ -259,13 +260,22 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
   }
 
   function updateActions() {
-    for (const button of [loadButton, renameButton, deleteButton]) button.disabled = !list.value;
+    for (const button of [loadButton, copyButton, renameButton, deleteButton]) button.disabled = !list.value;
   }
 
   function writeScenarios(updated, selected) {
     localStorage.setItem(scenariosKey, JSON.stringify(updated));
     scenarios = updated;
     updateList(selected);
+  }
+
+  function requestName(message, defaultName) {
+    const response = window.prompt(message, defaultName);
+    if (response === null) return null;
+    const name = response.trim();
+    if (name && name.length <= nameInput.maxLength) return name;
+    status.textContent = `Введите имя длиной от 1 до ${nameInput.maxLength} символов.`;
+    return null;
   }
 
   try {
@@ -314,16 +324,38 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
       status.textContent = `Сценарий не загружен. ${error.message}`;
     }
   });
+  copyButton.addEventListener("click", () => {
+    const sourceName = list.value;
+    const name = requestName("Имя копии сценария", `${sourceName.slice(0, nameInput.maxLength - 8)} (копия)`);
+    if (name === null) return;
+    try {
+      const latest = readScenarios();
+      const source = latest.find(entry => entry.name === sourceName);
+      if (!source) {
+        scenarios = latest;
+        updateList();
+        status.textContent = "Выбранный сценарий отсутствует в хранилище.";
+        return;
+      }
+      if (latest.some(entry => entry.name === name)) {
+        status.textContent = `Имя «${name}» уже используется.`;
+        return;
+      }
+      validateImportedSettings(source.settings, operators);
+      writeScenarios([...latest, { name, settings: source.settings }], name);
+      applySettings(source.settings);
+      nameInput.value = name;
+      const saved = saveAndRender();
+      status.textContent = saved ? `Копия «${name}» сохранена и загружена.`
+        : `Копия «${name}» сохранена. Текущие настройки не удалось сохранить.`;
+    } catch (error) {
+      status.textContent = `Сценарий не скопирован. ${error.message}`;
+    }
+  });
   renameButton.addEventListener("click", () => {
     const previousName = list.value;
-    const response = window.prompt("Новое имя сценария", previousName);
-    if (response === null) return;
-    const name = response.trim();
-    if (name === previousName) return;
-    if (!name || name.length > nameInput.maxLength) {
-      status.textContent = `Введите имя длиной от 1 до ${nameInput.maxLength} символов.`;
-      return;
-    }
+    const name = requestName("Новое имя сценария", previousName);
+    if (name === null || name === previousName) return;
     try {
       const latest = readScenarios();
       if (!latest.some(entry => entry.name === previousName)) {
