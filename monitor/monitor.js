@@ -18,8 +18,11 @@ const statusLabels = { good: "Норма", warning: "Деградация", crit
 const elements = Object.fromEntries([
   "scenario", "refresh", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
+  "floor-map", "repeater-marker", "zone-details",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
+const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
+  button => [button.dataset.zone, button]));
 const timeFormat = new Intl.DateTimeFormat("ru-RU", {
   hour: "2-digit", minute: "2-digit", second: "2-digit",
 });
@@ -67,6 +70,10 @@ function formatValue(value) {
   return value == null ? "—" : String(value).replace("-", "−");
 }
 
+function statusBadge(status) {
+  return `<span class="status ${status}"><i aria-hidden="true"></i>${statusLabels[status]}</span>`;
+}
+
 function tile(title, value, detail, tone = "", unit = "") {
   return `<div class="tile"><span>${title}</span><strong class="${tone}">${value}${unit ? ` <small>${unit}</small>` : ""}</strong><small>${detail}</small></div>`;
 }
@@ -84,7 +91,7 @@ function renderSummary(states) {
 }
 
 function renderZones(states) {
-  const focusedZone = document.activeElement?.dataset.zone;
+  const focusedZone = elements.zones.contains(document.activeElement) ? document.activeElement.dataset.zone : null;
   const latest = samples.at(-1);
   elements.zones.innerHTML = states.map(({ zone, status }) => {
     const selected = zone.id === selectedZone;
@@ -96,7 +103,7 @@ function renderZones(states) {
     }).join("");
     return `<tr class="${selected ? "selected" : ""}">
       <td><button class="zone-button" type="button" data-zone="${zone.id}" aria-pressed="${selected}"><b>${zone.id}</b> ${zone.name}</button></td>
-      ${values}<td><span class="status ${status}"><i aria-hidden="true"></i>${statusLabels[status]}</span></td>
+      ${values}<td>${statusBadge(status)}</td>
     </tr>`;
   }).join("");
   if (focusedZone) elements.zones.querySelector(`[data-zone="${focusedZone}"]`)?.focus({ preventScroll: true });
@@ -110,12 +117,12 @@ function getAlarms(states) {
   for (const { zone, status } of states) {
     const source = `${zone.id} · ${zone.name}`;
     if (status === "warning") {
-      alarms.push({ source, title: "Сигнал ниже порога", detail: "Три последовательных отсчёта с низким RSRP или SINR.", level: "warning" });
+      alarms.push({ zoneId: zone.id, source, title: "Сигнал ниже порога", detail: "Три последовательных отсчёта с низким RSRP или SINR.", level: "warning" });
     }
     if (status === "critical") {
       const age = samples.at(-1).time - lastSeen.get(zone.id);
       if (age > 60_000) {
-        alarms.push({ source, title: "Потеря телеметрии", detail: "Зонд не передаёт данные более 60 секунд.", level: "critical" });
+        alarms.push({ zoneId: zone.id, source, title: "Потеря телеметрии", detail: "Зонд не передаёт данные более 60 секунд.", level: "critical" });
       }
     }
   }
@@ -128,6 +135,39 @@ function renderAlarms(alarms) {
     <li><span class="severity ${level}">${level === "critical" ? "Критическая" : "Предупреждение"}</span>
       <strong>${title}</strong><p>${source}</p><p>${detail}</p></li>`
   ).join("") : '<li><strong class="good">Активных тревог нет</strong><p>Репитер и зонды работают штатно.</p></li>';
+}
+
+function renderFloor(states, alarms) {
+  const online = scenario !== "offline";
+  const repeaterMarker = elements["repeater-marker"];
+  repeaterMarker.dataset.status = online ? "good" : "critical";
+  repeaterMarker.title = `Репитер R1 · ${online ? "В работе" : "Отключён"}`;
+  repeaterMarker.setAttribute("aria-label", repeaterMarker.title);
+
+  for (const { zone, status } of states) {
+    const marker = mapMarkers.get(zone.id);
+    marker.dataset.status = status;
+    marker.title = `${zone.id} · ${zone.name} · ${statusLabels[status]}`;
+    marker.setAttribute("aria-label", marker.title);
+    marker.setAttribute("aria-pressed", String(zone.id === selectedZone));
+  }
+
+  const { zone, status } = states.find(state => state.zone.id === selectedZone);
+  const reading = samples.at(-1).zones[zone.id];
+  const values = Object.entries(metrics).map(([key, { label, unit }]) => `
+    <div><dt>${label}</dt><dd>${formatValue(reading?.[key])}${reading ? ` <small>${unit}</small>` : ""}</dd></div>`
+  ).join("");
+  const zoneAlarms = alarms.filter(alarm => alarm.zoneId === zone.id);
+  const alarmDetails = zoneAlarms.length
+    ? `<ul>${zoneAlarms.map(({ title, detail, level }) =>
+      `<li><strong class="${level}">${title}</strong><p>${detail}</p></li>`).join("")}</ul>`
+    : "<p>Активных тревог нет.</p>";
+  elements["zone-details"].innerHTML = `
+    <h3 id="zone-details-title">${zone.id} · ${zone.name}</h3>
+    ${statusBadge(status)}
+    <dl>${values}</dl>
+    <h4>Тревоги зоны</h4>
+    ${alarmDetails}`;
 }
 
 function renderChart() {
@@ -171,6 +211,7 @@ function render() {
   const states = zones.map(zone => ({ zone, status: zoneStatus(zone) }));
   const alarms = getAlarms(states);
   renderSummary(states);
+  renderFloor(states, alarms);
   renderZones(states);
   renderAlarms(alarms);
   renderChart();
@@ -210,12 +251,16 @@ elements.refresh.addEventListener("click", () => {
   restartTimer();
   elements.announcement.textContent = elements.updated.textContent;
 });
-elements.zones.addEventListener("click", event => {
+function selectZone(event) {
   const button = event.target.closest("[data-zone]");
   if (!button) return;
   selectedZone = button.dataset.zone;
   render();
-});
+  elements.announcement.textContent = elements["zone-details"].innerText;
+}
+
+elements.zones.addEventListener("click", selectZone);
+elements["floor-map"].addEventListener("click", selectZone);
 for (const button of metricButtons) {
   button.addEventListener("click", () => {
     selectedMetric = button.dataset.metric;

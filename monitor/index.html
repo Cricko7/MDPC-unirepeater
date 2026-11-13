@@ -29,11 +29,37 @@
       </div>
     </div>
     <div class="summary" id="summary" aria-label="Состояние системы"></div>
+    <section class="panel floor-panel" aria-labelledby="floor-title">
+      <header class="panel-heading">
+        <div><h2 id="floor-title">План МЦОД</h2><p>Выберите зону на плане, чтобы посмотреть её показатели и тревоги.</p></div>
+        <a href="../docs/mdpc-radio-layout.png" target="_blank" rel="noopener">Полная схема ↗</a>
+      </header>
+      <div class="floor-grid">
+        <div>
+          <div class="floor-scroll">
+            <div class="floor-map" id="floor-map">
+              <img src="../docs/mdpc-radio-layout.png" width="1860" height="1165" alt="План помещений МЦОД и кабельных трасс">
+              <span class="map-marker" id="repeater-marker" role="img" style="--x: 84.4%; --y: 22.5%">R1</span>
+              <button class="map-marker" type="button" data-zone="A1" style="--x: 11.3%; --y: 39.1%">A1</button>
+              <button class="map-marker" type="button" data-zone="A2" style="--x: 82.8%; --y: 61.3%">A2</button>
+              <button class="map-marker" type="button" data-zone="A3" style="--x: 83%; --y: 85.9%">A3</button>
+              <button class="map-marker" type="button" data-zone="A4" style="--x: 67.2%; --y: 11.4%">A4</button>
+              <button class="map-marker" type="button" data-zone="A5" style="--x: 93.6%; --y: 7.4%">A5</button>
+            </div>
+          </div>
+          <div class="map-legend" aria-label="Обозначения статусов">
+            <span class="status good"><i aria-hidden="true"></i>Норма / в работе</span>
+            <span class="status warning"><i aria-hidden="true"></i>Деградация</span>
+            <span class="status critical"><i aria-hidden="true"></i>Нет данных / отключён</span>
+          </div>
+        </div>
+        <section class="zone-details" id="zone-details" aria-labelledby="zone-details-title"></section>
+      </div>
+    </section>
     <div class="dashboard">
       <section class="panel zones" aria-labelledby="zones-title">
         <header class="panel-heading">
           <div><h2 id="zones-title">Зоны покрытия</h2><p>Пороги · RSRP ≥ −100 дБм · SINR ≥ 5 дБ</p></div>
-          <a href="../docs/mdpc-radio-layout.png" target="_blank" rel="noopener">План МЦОД ↗</a>
         </header>
         <div class="table-scroll">
           <table>
