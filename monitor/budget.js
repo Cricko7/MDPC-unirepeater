@@ -11,6 +11,15 @@ const format = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximu
 const signed = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
 const carrierRows = document.getElementById("carrier-rows");
 const errors = document.getElementById("budget-errors");
+const settingsKey = "mdpc.monitor.budgetSettings.v1";
+
+function loadBudgetSettings() {
+  try {
+    return JSON.parse(localStorage.getItem(settingsKey)) ?? {};
+  } catch {
+    return {};
+  }
+}
 
 function setWidths(select, band, selected) {
   select.replaceChildren(...band.widths.map(width => new Option(String(width), String(width))));
@@ -177,6 +186,41 @@ function downloadCsv(filename, headers, rows) {
 function setup(scenario) {
   const operators = scenario.operators.map(carrierRow);
   carrierRows.replaceChildren(...operators.map(operator => operator.row));
+  const gsmBand = document.getElementById("gsm-band");
+  const gsmArfcn = document.getElementById("gsm-arfcn");
+  const saved = loadBudgetSettings();
+  for (const { fields, name } of operators) {
+    const carrier = saved.carriers?.[name];
+    if (!carrier) continue;
+    if (Object.hasOwn(bands, carrier.band)) fields.band.value = carrier.band;
+    setWidths(fields.width, bands[fields.band.value], carrier.width ?? Number(fields.width.value));
+    if (typeof carrier.frequency === "string") fields.frequency.value = carrier.frequency;
+    if (typeof carrier.power === "string") fields.power.value = carrier.power;
+  }
+  if (saved.gsm?.band === "900" || saved.gsm?.band === "1800") {
+    gsmBand.value = saved.gsm.band;
+    gsmArfcn.value = typeof saved.gsm.arfcn === "string"
+      ? saved.gsm.arfcn
+      : gsmBand.value === "1800" ? 698 : 62;
+  }
+
+  function saveAndRender() {
+    const carriers = Object.fromEntries(operators.map(({ fields, name }) => [name, {
+      band: fields.band.value,
+      width: Number(fields.width.value),
+      frequency: fields.frequency.value,
+      power: fields.power.value,
+    }]));
+    try {
+      localStorage.setItem(settingsKey, JSON.stringify({
+        carriers, gsm: { band: gsmBand.value, arfcn: gsmArfcn.value },
+      }));
+    } catch {
+      // The calculator remains usable when browser storage is unavailable.
+    }
+    render();
+  }
+
   const target = scenario.rsrp_target_dbm;
   const reserve = scenario.design_reserve_db;
   document.getElementById("budget-target").textContent =
@@ -292,14 +336,12 @@ function setup(scenario) {
   }
   const form = document.getElementById("budget-carriers");
   form.addEventListener("submit", event => event.preventDefault());
-  form.addEventListener("input", render);
-  const gsmBand = document.getElementById("gsm-band");
-  const gsmArfcn = document.getElementById("gsm-arfcn");
+  form.addEventListener("input", saveAndRender);
   gsmBand.addEventListener("change", () => {
     gsmArfcn.value = gsmBand.value === "1800" ? 698 : 62;
-    render();
+    saveAndRender();
   });
-  gsmArfcn.addEventListener("input", render);
+  gsmArfcn.addEventListener("input", saveAndRender);
   render();
 }
 
