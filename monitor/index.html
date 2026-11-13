@@ -79,11 +79,35 @@
         </section>
       </section>
       <section class="panel alarms" aria-labelledby="alarms-title">
-        <header class="panel-heading"><div><h2 id="alarms-title">Активные тревоги</h2><p>Репитер и зонды покрытия</p></div><span class="alarm-count" id="alarm-count"></span></header>
+        <header class="panel-heading"><div><h2 id="alarms-title">Активные тревоги</h2><p><a href="#alarm-history">Перейти к журналу ↓</a></p></div><span class="alarm-count" id="alarm-count"></span></header>
         <ul id="alarms"></ul>
         <p class="alarm-rule">Деградация фиксируется после трёх отсчётов ниже порога. Потеря телеметрии — после 60 секунд без данных.</p>
       </section>
     </div>
+    <section class="panel alarm-history" id="alarm-history" aria-labelledby="alarm-history-title">
+      <header class="panel-heading">
+        <div><h2 id="alarm-history-title">Журнал тревог</h2><p>История тестовых событий в текущей сессии</p></div>
+        <span class="history-count" id="history-count" aria-live="polite"></span>
+      </header>
+      <div class="history-filters" role="group" aria-label="Фильтры журнала">
+        <label for="history-zone">Зона или устройство
+          <select id="history-zone"><option value="">Все зоны и репитер</option></select>
+        </label>
+        <label for="history-level">Критичность
+          <select id="history-level">
+            <option value="">Все уровни</option>
+            <option value="critical">Критическая</option>
+            <option value="warning">Предупреждение</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-scroll history-scroll" role="region" aria-label="Записи журнала тревог" tabindex="0">
+        <table>
+          <thead><tr><th scope="col">Источник и событие</th><th scope="col">Критичность</th><th scope="col">Возникновение</th><th scope="col">Восстановление</th></tr></thead>
+          <tbody id="history-rows"></tbody>
+        </table>
+      </div>
+    </section>
     <footer><span>Интервал симуляции · 15 с</span><time id="updated"></time></footer>
     <p class="sr-only" id="announcement" role="status"></p>
   </main>

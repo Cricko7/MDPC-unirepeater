@@ -15,10 +15,12 @@ const zones = [
 ];
 const variation = [0, 2, 1, -1, -2, 1, 0, -1];
 const statusLabels = { good: "Норма", warning: "Деградация", critical: "Нет данных" };
+const severityLabels = { warning: "Предупреждение", critical: "Критическая" };
 const elements = Object.fromEntries([
   "scenario", "refresh", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
+  "history-zone", "history-level", "history-rows", "history-count",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -26,6 +28,12 @@ const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[d
 const timeFormat = new Intl.DateTimeFormat("ru-RU", {
   hour: "2-digit", minute: "2-digit", second: "2-digit",
 });
+const historyTimeFormat = new Intl.DateTimeFormat("ru-RU", {
+  day: "2-digit", month: "2-digit", year: "numeric",
+  hour: "2-digit", minute: "2-digit", second: "2-digit",
+});
+const alarmHistory = [];
+const openAlarms = new Map();
 
 let scenario = elements.scenario.value;
 let selectedZone = "A2";
@@ -112,17 +120,17 @@ function renderZones(states) {
 function getAlarms(states) {
   const alarms = [];
   if (scenario === "offline") {
-    alarms.push({ source: "R1", title: "Репитер отключён", detail: "RF выключен в тестовом сценарии.", level: "critical" });
+    alarms.push({ sourceId: "R1", type: "rf-off", source: "R1 · Репитер", title: "Репитер отключён", detail: "RF выключен в тестовом сценарии.", level: "critical" });
   }
   for (const { zone, status } of states) {
     const source = `${zone.id} · ${zone.name}`;
     if (status === "warning") {
-      alarms.push({ zoneId: zone.id, source, title: "Сигнал ниже порога", detail: "Три последовательных отсчёта с низким RSRP или SINR.", level: "warning" });
+      alarms.push({ sourceId: zone.id, type: "low-signal", source, title: "Сигнал ниже порога", detail: "Три последовательных отсчёта с низким RSRP или SINR.", level: "warning" });
     }
     if (status === "critical") {
       const age = samples.at(-1).time - lastSeen.get(zone.id);
       if (age > 60_000) {
-        alarms.push({ zoneId: zone.id, source, title: "Потеря телеметрии", detail: "Зонд не передаёт данные более 60 секунд.", level: "critical" });
+        alarms.push({ sourceId: zone.id, type: "no-telemetry", source, title: "Потеря телеметрии", detail: "Зонд не передаёт данные более 60 секунд.", level: "critical" });
       }
     }
   }
@@ -132,9 +140,49 @@ function getAlarms(states) {
 function renderAlarms(alarms) {
   elements["alarm-count"].textContent = alarms.length;
   elements.alarms.innerHTML = alarms.length ? alarms.map(({ source, title, detail, level }) => `
-    <li><span class="severity ${level}">${level === "critical" ? "Критическая" : "Предупреждение"}</span>
+    <li><span class="severity ${level}">${severityLabels[level]}</span>
       <strong>${title}</strong><p>${source}</p><p>${detail}</p></li>`
   ).join("") : '<li><strong class="good">Активных тревог нет</strong><p>Репитер и зонды работают штатно.</p></li>';
+}
+
+function updateAlarmHistory(alarms, time) {
+  const activeKeys = new Set();
+  for (const alarm of alarms) {
+    const key = `${alarm.sourceId}/${alarm.type}`;
+    activeKeys.add(key);
+    if (openAlarms.has(key)) continue;
+    const entry = { ...alarm, occurredAt: time, recoveredAt: null };
+    alarmHistory.push(entry);
+    openAlarms.set(key, entry);
+  }
+  for (const [key, entry] of openAlarms) {
+    if (!activeKeys.has(key)) {
+      entry.recoveredAt = time;
+      openAlarms.delete(key);
+    }
+  }
+}
+
+function historyTime(time) {
+  return `<time datetime="${new Date(time).toISOString()}">${historyTimeFormat.format(time)}</time>`;
+}
+
+function renderAlarmHistory() {
+  const source = elements["history-zone"].value;
+  const level = elements["history-level"].value;
+  const rows = alarmHistory.filter(entry =>
+    (!source || entry.sourceId === source) && (!level || entry.level === level)).reverse();
+  const count = `Записей: ${rows.length} из ${alarmHistory.length}`;
+  const counter = elements["history-count"];
+  if (counter.textContent !== count) counter.textContent = count;
+  elements["history-rows"].innerHTML = rows.length ? rows.map(entry => `
+    <tr>
+      <td><strong>${entry.title}</strong><small>${entry.source}</small></td>
+      <td><span class="status ${entry.level}"><i aria-hidden="true"></i>${severityLabels[entry.level]}</span></td>
+      <td>${historyTime(entry.occurredAt)}</td>
+      <td>${entry.recoveredAt === null ? "Активна" : historyTime(entry.recoveredAt)}</td>
+    </tr>`).join("") : `<tr><td colspan="4" class="history-empty">${alarmHistory.length
+      ? "Нет записей по выбранным фильтрам." : "Тревоги пока не зарегистрированы."}</td></tr>`;
 }
 
 function renderFloor(states, alarms) {
@@ -157,7 +205,7 @@ function renderFloor(states, alarms) {
   const values = Object.entries(metrics).map(([key, { label, unit }]) => `
     <div><dt>${label}</dt><dd>${formatValue(reading?.[key])}${reading ? ` <small>${unit}</small>` : ""}</dd></div>`
   ).join("");
-  const zoneAlarms = alarms.filter(alarm => alarm.zoneId === zone.id);
+  const zoneAlarms = alarms.filter(alarm => alarm.sourceId === zone.id);
   const alarmDetails = zoneAlarms.length
     ? `<ul>${zoneAlarms.map(({ title, detail, level }) =>
       `<li><strong class="${level}">${title}</strong><p>${detail}</p></li>`).join("")}</ul>`
@@ -207,7 +255,7 @@ function renderChart() {
   </svg>`;
 }
 
-function render() {
+function render({ recordAlarms = false } = {}) {
   const states = zones.map(zone => ({ zone, status: zoneStatus(zone) }));
   const alarms = getAlarms(states);
   renderSummary(states);
@@ -216,6 +264,10 @@ function render() {
   renderAlarms(alarms);
   renderChart();
   const time = new Date(samples.at(-1).time);
+  if (recordAlarms) {
+    updateAlarmHistory(alarms, time.getTime());
+    renderAlarmHistory();
+  }
   elements.updated.dateTime = time.toISOString();
   elements.updated.textContent = `Обновлено в ${timeFormat.format(time)}`;
 }
@@ -226,14 +278,14 @@ function reset() {
   samples = Array.from({ length: sampleCount }, (_, index) =>
     makeSample(index, now - (sampleCount - 1 - index) * interval));
   sequence = sampleCount;
-  render();
+  render({ recordAlarms: true });
   restartTimer();
 }
 
 function nextSample() {
   samples = [...samples.slice(1), makeSample(sequence, Date.now())];
   sequence += 1;
-  render();
+  render({ recordAlarms: true });
 }
 
 function restartTimer() {
@@ -261,6 +313,13 @@ function selectZone(event) {
 
 elements.zones.addEventListener("click", selectZone);
 elements["floor-map"].addEventListener("click", selectZone);
+const historyZone = elements["history-zone"];
+historyZone.add(new Option("R1 · Репитер", "R1"));
+for (const zone of zones) {
+  historyZone.add(new Option(`${zone.id} · ${zone.name}`, zone.id));
+}
+historyZone.addEventListener("change", renderAlarmHistory);
+elements["history-level"].addEventListener("change", renderAlarmHistory);
 for (const button of metricButtons) {
   button.addEventListener("click", () => {
     selectedMetric = button.dataset.metric;
