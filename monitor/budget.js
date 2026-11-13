@@ -245,6 +245,8 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
   const list = document.getElementById("budget-scenario-list");
   const saveButton = document.getElementById("budget-scenario-save");
   const loadButton = document.getElementById("budget-scenario-load");
+  const renameButton = document.getElementById("budget-scenario-rename");
+  const deleteButton = document.getElementById("budget-scenario-delete");
   const status = document.getElementById("budget-scenario-status");
   let scenarios = [];
 
@@ -253,7 +255,17 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
       ...scenarios.map(({ name }) => new Option(name, name)));
     list.value = selected;
     list.disabled = scenarios.length === 0;
-    loadButton.disabled = !list.value;
+    updateActions();
+  }
+
+  function updateActions() {
+    for (const button of [loadButton, renameButton, deleteButton]) button.disabled = !list.value;
+  }
+
+  function writeScenarios(updated, selected) {
+    localStorage.setItem(scenariosKey, JSON.stringify(updated));
+    scenarios = updated;
+    updateList(selected);
   }
 
   try {
@@ -264,9 +276,7 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
   updateList();
   saveButton.disabled = false;
 
-  list.addEventListener("change", () => {
-    loadButton.disabled = !list.value;
-  });
+  list.addEventListener("change", updateActions);
   form.addEventListener("submit", event => {
     event.preventDefault();
     const name = nameInput.value.trim();
@@ -284,9 +294,7 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
     try {
       const updated = readScenarios().filter(entry => entry.name !== name);
       updated.push({ name, settings });
-      localStorage.setItem(scenariosKey, JSON.stringify(updated));
-      scenarios = updated;
-      updateList(name);
+      writeScenarios(updated, name);
       status.textContent = `Сценарий «${name}» сохранён.`;
     } catch {
       status.textContent = "Сценарий не удалось сохранить в хранилище браузера.";
@@ -304,6 +312,46 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
         : `Сценарий «${entry.name}» загружен. Текущие настройки не удалось сохранить.`;
     } catch (error) {
       status.textContent = `Сценарий не загружен. ${error.message}`;
+    }
+  });
+  renameButton.addEventListener("click", () => {
+    const previousName = list.value;
+    const response = window.prompt("Новое имя сценария", previousName);
+    if (response === null) return;
+    const name = response.trim();
+    if (name === previousName) return;
+    if (!name || name.length > nameInput.maxLength) {
+      status.textContent = `Введите имя длиной от 1 до ${nameInput.maxLength} символов.`;
+      return;
+    }
+    try {
+      const latest = readScenarios();
+      if (!latest.some(entry => entry.name === previousName)) {
+        scenarios = latest;
+        updateList();
+        status.textContent = "Выбранный сценарий отсутствует в хранилище.";
+        return;
+      }
+      if (latest.some(entry => entry.name === name)) {
+        status.textContent = `Имя «${name}» уже используется.`;
+        return;
+      }
+      writeScenarios(latest.map(entry => entry.name === previousName ? { ...entry, name } : entry), name);
+      if (nameInput.value.trim() === previousName) nameInput.value = name;
+      status.textContent = `Сценарий переименован в «${name}».`;
+    } catch {
+      status.textContent = "Сценарий не удалось переименовать в хранилище браузера.";
+    }
+  });
+  deleteButton.addEventListener("click", () => {
+    const name = list.value;
+    if (!window.confirm(`Удалить сохранённый сценарий «${name}»?`)) return;
+    try {
+      writeScenarios(readScenarios().filter(entry => entry.name !== name), "");
+      if (nameInput.value.trim() === name) nameInput.value = "";
+      status.textContent = `Сценарий «${name}» удалён.`;
+    } catch {
+      status.textContent = "Сценарий не удалось удалить из хранилища браузера.";
     }
   });
 }
