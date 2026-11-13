@@ -1,9 +1,9 @@
 "use strict";
 
 const bands = {
-  B1: { min: 2110, max: 2170, widths: [5, 10, 15, 20] },
-  B3: { min: 1805, max: 1880, widths: [1.4, 3, 5, 10, 15, 20] },
-  B7: { min: 2620, max: 2690, widths: [5, 10, 15, 20] },
+  B1: { min: 2110, max: 2170, duplex: 190, widths: [5, 10, 15, 20] },
+  B3: { min: 1805, max: 1880, duplex: 95, widths: [1.4, 3, 5, 10, 15, 20] },
+  B7: { min: 2620, max: 2690, duplex: 120, widths: [5, 10, 15, 20] },
 };
 const blocks = { 1.4: 6, 3: 15, 5: 25, 10: 50, 15: 75, 20: 100 };
 const cableLosses = [[1800, 15.6], [2000, 16], [2200, 17.3], [2500, 18.6], [2700, 19.7]];
@@ -67,6 +67,69 @@ function rsrp(carrier, zone) {
   return carrier.power - feeder - freeSpace - zone.zone_loss_db - referenceCorrection;
 }
 
+function frequencyRange(center, width) {
+  return { low: center - width / 2, high: center + width / 2 };
+}
+
+function gsmChannel(band, arfcn) {
+  if (!Number.isInteger(arfcn)) return null;
+  if (band === "1800") {
+    if (arfcn < 512 || arfcn > 885) return null;
+    const ul = 1710.2 + 0.2 * (arfcn - 512);
+    return { ul, dl: ul + 95 };
+  }
+  if ((arfcn < 0 || arfcn > 124) && (arfcn < 975 || arfcn > 1023)) return null;
+  const ul = 890 + 0.2 * (arfcn > 124 ? arfcn - 1024 : arfcn);
+  return { ul, dl: ul + 45 };
+}
+
+function renderGsm(carriers) {
+  const band = document.getElementById("gsm-band").value;
+  const input = document.getElementById("gsm-arfcn");
+  const channel = gsmChannel(band, input.valueAsNumber);
+  const result = document.getElementById("gsm-result");
+  const findings = document.getElementById("gsm-findings");
+  document.getElementById("gsm-range").textContent = band === "1800" ? "512–885" : "0–124 или 975–1023";
+  input.setAttribute("aria-invalid", String(!channel));
+  findings.replaceChildren();
+  if (!channel) {
+    result.textContent = "Введите допустимый целый ARFCN для выбранного диапазона.";
+    return;
+  }
+
+  const signals = carriers.filter(carrier => carrier && !carrier.useEdge).flatMap(carrier => [
+    { label: `${carrier.name} DL`, ...frequencyRange(carrier.frequency, carrier.width) },
+    { label: `${carrier.name} UL`, ...frequencyRange(carrier.frequency - bands[carrier.band].duplex, carrier.width) },
+  ]);
+  const targets = [
+    { label: "GSM UL", ...frequencyRange(channel.ul, 0.2) },
+    { label: "GSM DL", ...frequencyRange(channel.dl, 0.2) },
+  ];
+  function check(signal, description) {
+    for (const target of targets) {
+      const overlap = Math.min(signal.high, target.high) - Math.max(signal.low, target.low);
+      if (overlap <= 1e-9) continue;
+      const item = document.createElement("li");
+      item.textContent = `${description} → ${target.label} (${format.format(signal.low)}–${format.format(signal.high)} МГц)`;
+      findings.append(item);
+    }
+  }
+  for (const signal of signals) {
+    check(signal, `Прямое перекрытие · ${signal.label}`);
+    for (const other of signals) {
+      if (signal === other) continue;
+      check({ low: 2 * signal.low - other.high, high: 2 * signal.high - other.low },
+        `IM3 · 2 × ${signal.label} − ${other.label}`);
+    }
+  }
+  const missing = carriers.length - signals.length / 2;
+  const summary = findings.childElementCount
+    ? `Пересечений: ${findings.childElementCount}.`
+    : signals.length ? "Для заданных несущих пересечений не найдено." : "Задайте центры LTE-несущих для проверки.";
+  result.textContent = `GSM UL ${format.format(channel.ul)} МГц · DL ${format.format(channel.dl)} МГц. ${summary}`
+    + (missing ? ` Вне проверки несущих: ${missing} (центр не задан или параметры некорректны).` : "");
+}
+
 function downloadBudget(rows) {
   const headers = ["Оператор", "Зона", "Диапазон LTE", "Частота DL для расчёта, МГц",
     "Режим частоты", "Ширина несущей, МГц", "Мощность на входе DAS, дБм",
@@ -103,6 +166,37 @@ function setup(scenario) {
     header.append(cell);
   }
   const body = table.createTBody();
+  const mapOperator = document.getElementById("budget-operator");
+  mapOperator.replaceChildren(...operators.map((operator, index) => new Option(operator.name, index)));
+  const markers = document.querySelectorAll("[data-budget-zone]");
+  const zoneDetail = document.getElementById("budget-zone-detail");
+  let selectedZone = scenario.zones[0].id;
+  let mapResults;
+
+  function renderMap() {
+    const operator = Number(mapOperator.value);
+    for (const marker of markers) {
+      const zone = marker.dataset.budgetZone;
+      const data = mapResults.get(zone)[operator];
+      marker.dataset.status = data ? (data.margin >= reserve ? "good" : "warning") : "unknown";
+      marker.setAttribute("aria-pressed", String(zone === selectedZone));
+      marker.setAttribute("aria-label", data ? `${zone}, запас ${signed.format(data.margin)} дБ` : `${zone}, нет расчёта`);
+    }
+    const data = mapResults.get(selectedZone)[operator];
+    const name = operators[operator].name;
+    zoneDetail.textContent = data
+      ? `${name} · ${selectedZone} · RSRP ${format.format(data.value)} дБм · запас ${signed.format(data.margin)} дБ`
+      : `${name} · ${selectedZone} · проверьте параметры несущей.`;
+  }
+
+  mapOperator.addEventListener("change", renderMap);
+  for (const marker of markers) {
+    marker.addEventListener("click", () => {
+      selectedZone = marker.dataset.budgetZone;
+      renderMap();
+    });
+  }
+
   const exportButton = document.getElementById("budget-export");
   let exportRows = [];
   exportButton.addEventListener("click", () => downloadBudget(exportRows));
@@ -113,6 +207,13 @@ function setup(scenario) {
     exportRows = [];
     exportButton.disabled = problems.length > 0;
     errors.textContent = problems.join(" ");
+    mapResults = new Map(scenario.zones.map(zone => [zone.id, carriers.map(carrier => {
+      if (!carrier) return null;
+      const value = rsrp(carrier, zone);
+      return { value, margin: value - target };
+    })]));
+    renderMap();
+    renderGsm(carriers);
     let count = 0;
     const resultRows = scenario.zones.map(zone => {
       const row = document.createElement("tr");
@@ -120,14 +221,13 @@ function setup(scenario) {
       heading.scope = "row";
       heading.textContent = zone.id;
       row.append(heading);
-      for (const carrier of carriers) {
+      for (const [index, carrier] of carriers.entries()) {
         const cell = row.insertCell();
         if (!carrier) {
           cell.textContent = "—";
           continue;
         }
-        const value = rsrp(carrier, zone);
-        const margin = value - target;
+        const { value, margin } = mapResults.get(zone.id)[index];
         exportRows.push([carrier.name, zone.id, carrier.band, carrier.frequency,
           carrier.useEdge ? "Верхняя граница" : "Центр несущей", carrier.width, carrier.power,
           value.toFixed(2).replace(".", ","), margin.toFixed(2).replace(".", ",")]);
@@ -162,6 +262,13 @@ function setup(scenario) {
   const form = document.getElementById("budget-carriers");
   form.addEventListener("submit", event => event.preventDefault());
   form.addEventListener("input", render);
+  const gsmBand = document.getElementById("gsm-band");
+  const gsmArfcn = document.getElementById("gsm-arfcn");
+  gsmBand.addEventListener("change", () => {
+    gsmArfcn.value = gsmBand.value === "1800" ? 698 : 62;
+    render();
+  });
+  gsmArfcn.addEventListener("input", render);
   render();
 }
 

@@ -20,3 +20,18 @@
 .budget-result-value { display: block; font-weight: 650; }
 .budget-result-reserve { display: block; margin-top: 3px; }
 .budget-note { font-size: .85rem; padding-bottom: 22px; }
+.budget-control, .gsm-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.budget-control { font-size: .85rem; }
+.budget-map-grid {
+  display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px; padding: 0 18px 18px; align-items: start;
+}
+.budget-map-grid .map-legend { margin: 0 0 10px; }
+.budget-map-grid .zone-details { font-size: .9rem; }
+.gsm-controls { padding: 0 18px 12px; gap: 12px; }
+.gsm-findings { margin: 0 18px 12px; padding-left: 20px; font-size: .85rem; overflow-wrap: anywhere; }
+.gsm-findings:empty { display: none; }
+.gsm-findings li + li { margin-top: 5px; }
+@media (max-width: 650px) {
+  .budget-map-grid { grid-template-columns: minmax(0, 1fr); }
+}

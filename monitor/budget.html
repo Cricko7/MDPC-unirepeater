@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#121616">
   <title>Бюджет радиолинии · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="budget.css?v=csv-1">
-  <script src="budget.js?v=csv-1" defer></script>
+  <link rel="stylesheet" href="budget.css?v=coverage-1">
+  <script src="budget.js?v=coverage-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -33,6 +33,31 @@
       </form>
       <p class="budget-hint warning" id="budget-errors" role="status"></p>
     </section>
+    <section class="panel" aria-labelledby="budget-map-title">
+      <header class="panel-heading">
+        <div><h2 id="budget-map-title">Карта запаса RSRP</h2><p>Расчёт по пяти контрольным точкам на плане МЦОД.</p></div>
+        <label class="budget-control">Оператор <select id="budget-operator"></select></label>
+      </header>
+      <div class="budget-map-grid">
+        <div class="floor-scroll">
+          <div class="floor-map">
+            <img src="../docs/mdpc-radio-layout.png" width="1860" height="1165" alt="План помещений МЦОД">
+            <button class="map-marker" type="button" data-budget-zone="A1" style="--x: 11.3%; --y: 39.1%">A1</button>
+            <button class="map-marker" type="button" data-budget-zone="A2" style="--x: 82.8%; --y: 61.3%">A2</button>
+            <button class="map-marker" type="button" data-budget-zone="A3" style="--x: 83%; --y: 85.9%">A3</button>
+            <button class="map-marker" type="button" data-budget-zone="A4" style="--x: 67.2%; --y: 11.4%">A4</button>
+            <button class="map-marker" type="button" data-budget-zone="A5" style="--x: 93.6%; --y: 7.4%">A5</button>
+          </div>
+        </div>
+        <div>
+          <div class="map-legend">
+            <span class="status good"><i aria-hidden="true"></i>Цель достигнута</span>
+            <span class="status warning"><i aria-hidden="true"></i>Запас ниже цели</span>
+          </div>
+          <p class="zone-details" id="budget-zone-detail" role="status">Выберите зону на плане.</p>
+        </div>
+      </div>
+    </section>
     <section class="panel" aria-labelledby="result-title">
       <header class="panel-heading">
         <div><h2 id="result-title">Покрытие по зонам</h2><p id="budget-target"></p></div>
@@ -46,7 +71,22 @@
         <table id="budget-results"></table>
       </div>
     </section>
-    <p class="budget-note">Начальные значения взяты из предварительного сценария. SINR, VoLTE и совместимость с аварийными SMS проверяются отдельно.</p>
+    <section class="panel" aria-labelledby="gsm-title">
+      <header class="panel-heading">
+        <div><h2 id="gsm-title">Проверка тестового GSM-канала</h2><p>Прямое перекрытие LTE и потенциальные продукты IM3 в полосах GSM UL и DL.</p></div>
+      </header>
+      <div class="gsm-controls">
+        <label class="budget-control">Диапазон GSM
+          <select id="gsm-band"><option value="1800">DCS 1800</option><option value="900">E-GSM 900</option></select>
+        </label>
+        <label class="budget-control">ARFCN <input type="number" id="gsm-arfcn" step="1" value="698" required aria-describedby="gsm-range"></label>
+        <small id="gsm-range"></small>
+      </div>
+      <p class="budget-hint" id="gsm-result" role="status"></p>
+      <ul class="gsm-findings" id="gsm-findings"></ul>
+      <p class="budget-hint">Проверка использует заданные центры LTE и номинальные полосы, для GSM — 200 кГц. IM3 рассчитывается для пар LTE UL и DL по формуле 2f₁ − f₂ при условии, что оба сигнала попадают на общий нелинейный элемент. Фактический уровень помех и доставку SMS проверяют на стенде.</p>
+    </section>
+    <p class="budget-note">Начальные значения взяты из предварительного сценария. SINR и VoLTE проверяются отдельно.</p>
   </main>
 </body>
 </html>
