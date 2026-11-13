@@ -152,12 +152,18 @@ tr.selected { background: #25302a; }
 .alarm-rule { border-top: 1px solid var(--line); margin: 0 18px; padding: 13px 0 15px; }
 .alarm-history { margin-top: 16px; }
 .history-count { color: var(--muted); font-size: .8rem; white-space: nowrap; }
-.history-filters { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 18px 16px; }
+.history-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 0 18px 16px; }
 .history-filters label { display: grid; gap: 5px; font-size: .8rem; color: var(--muted); }
 .history-filters select {
   min-height: 39px; max-width: 100%; padding: 6px 9px;
   background: #202827; color: #edf2ee; border: 1px solid var(--line); border-radius: 8px;
 }
+.history-export {
+  min-height: 39px; padding: 6px 12px; background: var(--green); color: #142110;
+  border: 1px solid transparent; border-radius: 8px; font-weight: 650; font-size: .85rem;
+}
+.history-export:hover:enabled { background: #d2ffa8; }
+.history-export:disabled { cursor: default; background: #202827; color: var(--muted); border-color: var(--line); }
 .history-scroll { border-radius: 0 0 14px 14px; }
 .history-scroll:focus-visible { outline-offset: -2px; }
 .alarm-history th, .alarm-history td { white-space: normal; }

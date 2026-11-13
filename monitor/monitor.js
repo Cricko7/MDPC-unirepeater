@@ -28,7 +28,7 @@ const elements = Object.fromEntries([
   "scenario", "refresh", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
-  "history-zone", "history-level", "history-rows", "history-count", "history-storage",
+  "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -231,11 +231,16 @@ function historyTime(time) {
   return `<time datetime="${new Date(time).toISOString()}">${historyTimeFormat.format(time)}</time>`;
 }
 
-function renderAlarmHistory() {
+function filteredAlarmHistory() {
   const source = elements["history-zone"].value;
   const level = elements["history-level"].value;
-  const rows = alarmHistory.filter(entry =>
+  return alarmHistory.filter(entry =>
     (!source || entry.sourceId === source) && (!level || entry.level === level)).reverse();
+}
+
+function renderAlarmHistory() {
+  const rows = filteredAlarmHistory();
+  elements["history-export"].disabled = rows.length === 0;
   const count = `Записей: ${rows.length} из ${alarmHistory.length}`;
   const counter = elements["history-count"];
   if (counter.textContent !== count) counter.textContent = count;
@@ -247,6 +252,31 @@ function renderAlarmHistory() {
       <td>${entry.recoveredAt === null ? "Активна" : historyTime(entry.recoveredAt)}</td>
     </tr>`).join("") : `<tr><td colspan="4" class="history-empty">${alarmHistory.length
       ? "Нет записей по выбранным фильтрам." : "Тревоги пока не зарегистрированы."}</td></tr>`;
+}
+
+function exportAlarmHistory() {
+  const entries = filteredAlarmHistory();
+  if (entries.length === 0) return;
+
+  const rows = [
+    ["Зона или устройство", "Критичность", "Время возникновения (UTC)", "Время восстановления (UTC)"],
+    ...entries.map(({ source, level, occurredAt, recoveredAt }) => [
+      source,
+      severityLabels[level],
+      new Date(occurredAt).toISOString(),
+      recoveredAt === null ? "" : new Date(recoveredAt).toISOString(),
+    ]),
+  ];
+  const csv = rows.map(row => row.map(value => `"${value.replaceAll('"', '""')}"`).join(";")).join("\r\n");
+  const file = new Blob(["\uFEFF", csv, "\r\n"], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "mdpc-alarm-history.csv";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function renderFloor(states, alarms) {
@@ -385,6 +415,7 @@ for (const zone of zones) {
 }
 historyZone.addEventListener("change", renderAlarmHistory);
 elements["history-level"].addEventListener("change", renderAlarmHistory);
+elements["history-export"].addEventListener("click", exportAlarmHistory);
 for (const button of metricButtons) {
   button.addEventListener("click", () => {
     selectedMetric = button.dataset.metric;
