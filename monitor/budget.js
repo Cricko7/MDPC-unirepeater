@@ -51,11 +51,14 @@ function resetCarrier(fields, operator) {
   setWidths(fields.width, bands[operator.band], operator.bandwidth_mhz);
 }
 
+function centerLimits(band, width) {
+  return [band.min + width / 2, band.max - width / 2];
+}
+
 function readCarrier({ fields, name }, problems) {
   const band = bands[fields.band.value];
   const width = Number(fields.width.value);
-  const lower = band.min + width / 2;
-  const upper = band.max - width / 2;
+  const [lower, upper] = centerLimits(band, width);
   fields.frequency.placeholder = `Край ${band.max}`;
   const useEdge = fields.frequency.value === "" && !fields.frequency.validity.badInput;
   const frequency = useEdge ? band.max : fields.frequency.valueAsNumber;
@@ -94,6 +97,45 @@ function gsmChannel(band, arfcn) {
   if ((arfcn < 0 || arfcn > 124) && (arfcn < 975 || arfcn > 1023)) return null;
   const ul = 890 + 0.2 * (arfcn > 124 ? arfcn - 1024 : arfcn);
   return { ul, dl: ul + 45 };
+}
+
+function validateImportedSettings(settings, operators) {
+  if (settings?.version !== 1 || !settings.carriers || !settings.gsm) {
+    throw new Error("Ожидается JSON настроек калькулятора версии 1.");
+  }
+  if (Object.keys(settings.carriers).length !== operators.length) {
+    throw new Error("Файл должен содержать настройки всех пяти операторов.");
+  }
+  for (const { name } of operators) {
+    const carrier = settings.carriers[name];
+    if (!Object.hasOwn(settings.carriers, name) || !carrier ||
+      typeof carrier.band !== "string" || !Object.hasOwn(bands, carrier.band)) {
+      throw new Error(`${name}: отсутствует несущая или указан неподдерживаемый диапазон.`);
+    }
+    const band = bands[carrier.band];
+    if (!band.widths.includes(carrier.width)) {
+      throw new Error(`${name}: ширина несущей недопустима для ${carrier.band}.`);
+    }
+    const [lower, upper] = centerLimits(band, carrier.width);
+    const frequency = Number(carrier.frequency);
+    if (typeof carrier.frequency !== "string" ||
+      (carrier.frequency !== "" && (!isNumberField(carrier.frequency) || frequency < lower || frequency > upper))) {
+      throw new Error(`${name}: частота центра должна быть от ${lower} до ${upper} МГц или оставаться пустой.`);
+    }
+    if (!isNumberField(carrier.power)) {
+      throw new Error(`${name}: укажите числовую мощность несущей.`);
+    }
+  }
+  const { band, arfcn } = settings.gsm;
+  if ((band !== "900" && band !== "1800") || !isNumberField(arfcn) ||
+    !gsmChannel(band, Number(arfcn))) {
+    throw new Error("Укажите допустимый диапазон GSM и ARFCN.");
+  }
+}
+
+function isNumberField(value) {
+  return typeof value === "string" && /^-?(?:\d+|\d*\.\d+)(?:e[+-]?\d+)?$/i.test(value)
+    && Number.isFinite(Number(value));
 }
 
 function renderGsm(carriers) {
@@ -176,7 +218,10 @@ function downloadCsv(filename, headers, rows) {
     const field = typeof value === "number" ? String(value).replace(".", ",") : value;
     return `"${field.replaceAll('"', '""')}"`;
   }).join(";")).join("\r\n");
-  const file = new Blob(["\uFEFF", csv, "\r\n"], { type: "text/csv;charset=utf-8" });
+  downloadFile(filename, new Blob(["\uFEFF", csv, "\r\n"], { type: "text/csv;charset=utf-8" }));
+}
+
+function downloadFile(filename, file) {
   const url = URL.createObjectURL(file);
   const link = document.createElement("a");
   link.href = url;
@@ -192,37 +237,43 @@ function setup(scenario) {
   carrierRows.replaceChildren(...operators.map(operator => operator.row));
   const gsmBand = document.getElementById("gsm-band");
   const gsmArfcn = document.getElementById("gsm-arfcn");
-  const saved = loadBudgetSettings();
-  for (const { fields, name } of operators) {
-    const carrier = saved.carriers?.[name];
-    if (!carrier) continue;
-    if (Object.hasOwn(bands, carrier.band)) fields.band.value = carrier.band;
-    setWidths(fields.width, bands[fields.band.value], carrier.width ?? Number(fields.width.value));
-    if (typeof carrier.frequency === "string") fields.frequency.value = carrier.frequency;
-    if (typeof carrier.power === "string") fields.power.value = carrier.power;
+  function applySettings(saved) {
+    for (const { fields, name } of operators) {
+      const carrier = saved.carriers?.[name];
+      if (!carrier) continue;
+      if (Object.hasOwn(bands, carrier.band)) fields.band.value = carrier.band;
+      setWidths(fields.width, bands[fields.band.value], carrier.width ?? Number(fields.width.value));
+      if (typeof carrier.frequency === "string") fields.frequency.value = carrier.frequency;
+      if (typeof carrier.power === "string") fields.power.value = carrier.power;
+    }
+    if (saved.gsm?.band === "900" || saved.gsm?.band === "1800") {
+      gsmBand.value = saved.gsm.band;
+      gsmArfcn.value = typeof saved.gsm.arfcn === "string"
+        ? saved.gsm.arfcn
+        : gsmBand.value === "1800" ? 698 : 62;
+    }
   }
-  if (saved.gsm?.band === "900" || saved.gsm?.band === "1800") {
-    gsmBand.value = saved.gsm.band;
-    gsmArfcn.value = typeof saved.gsm.arfcn === "string"
-      ? saved.gsm.arfcn
-      : gsmBand.value === "1800" ? 698 : 62;
-  }
+  applySettings(loadBudgetSettings());
 
-  function saveAndRender() {
+  function currentSettings() {
     const carriers = Object.fromEntries(operators.map(({ fields, name }) => [name, {
       band: fields.band.value,
       width: Number(fields.width.value),
       frequency: fields.frequency.value,
       power: fields.power.value,
     }]));
+    return { version: 1, carriers, gsm: { band: gsmBand.value, arfcn: gsmArfcn.value } };
+  }
+
+  function saveAndRender() {
+    let saved = true;
     try {
-      localStorage.setItem(settingsKey, JSON.stringify({
-        carriers, gsm: { band: gsmBand.value, arfcn: gsmArfcn.value },
-      }));
+      localStorage.setItem(settingsKey, JSON.stringify(currentSettings()));
     } catch {
-      // The calculator remains usable when browser storage is unavailable.
+      saved = false;
     }
     render();
+    return saved;
   }
 
   const target = scenario.rsrp_target_dbm;
@@ -272,6 +323,7 @@ function setup(scenario) {
 
   const exportButton = document.getElementById("budget-export");
   const gsmExport = document.getElementById("gsm-export");
+  const settingsExport = document.getElementById("budget-settings-export");
   let gsmReport = null;
   gsmExport.addEventListener("click", () => {
     if (gsmReport) downloadGsm(gsmReport);
@@ -293,6 +345,7 @@ function setup(scenario) {
     renderMap();
     gsmReport = renderGsm(carriers);
     gsmExport.disabled = !gsmReport;
+    settingsExport.disabled = exportButton.disabled || gsmExport.disabled;
     let count = 0;
     const resultRows = scenario.zones.map(zone => {
       const row = document.createElement("tr");
@@ -347,14 +400,43 @@ function setup(scenario) {
   });
   gsmArfcn.addEventListener("input", saveAndRender);
   const resetButton = document.getElementById("budget-reset");
+  const importButton = document.getElementById("budget-import");
+  const settingsFile = document.getElementById("budget-settings-file");
+  const settingsStatus = document.getElementById("budget-settings-status");
+  importButton.addEventListener("click", () => settingsFile.click());
+  settingsExport.addEventListener("click", () => {
+    downloadFile("mdpc-calculator-settings.json", new Blob(
+      [JSON.stringify(currentSettings(), null, 2), "\n"], { type: "application/json" }));
+  });
+  settingsFile.addEventListener("change", async () => {
+    const file = settingsFile.files[0];
+    settingsFile.value = "";
+    if (!file) return;
+    importButton.disabled = true;
+    try {
+      const settings = JSON.parse(await file.text());
+      validateImportedSettings(settings, operators);
+      applySettings(settings);
+      const saved = saveAndRender();
+      settingsStatus.textContent = saved ? "Настройки импортированы и сохранены."
+        : "Настройки импортированы. Хранилище браузера недоступно.";
+    } catch (error) {
+      const reason = error instanceof SyntaxError ? "Файл содержит некорректный JSON." : error.message;
+      settingsStatus.textContent = `Импорт не выполнен. ${reason}`;
+    } finally {
+      importButton.disabled = false;
+    }
+  });
   resetButton.addEventListener("click", () => {
     for (const { fields, defaults } of operators) resetCarrier(fields, defaults);
     gsmBand.selectedIndex = 0;
     gsmArfcn.value = gsmArfcn.defaultValue;
+    settingsStatus.textContent = "";
     saveAndRender();
   });
   render();
   resetButton.disabled = false;
+  importButton.disabled = false;
 }
 
 fetch("../tools/mdpc-scenario.json")
