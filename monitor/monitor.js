@@ -29,7 +29,7 @@ const elements = Object.fromEntries([
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
-  "history-status", "history-from", "history-to", "history-filters", "history-reset",
+  "history-status", "history-from", "history-to", "history-sort", "history-filters", "history-reset",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -242,6 +242,7 @@ function filteredAlarmHistory() {
   const source = elements["history-zone"].value;
   const level = elements["history-level"].value;
   const status = elements["history-status"].value;
+  const sortDirection = elements["history-sort"].value === "oldest" ? 1 : -1;
   const from = dateInputKey(elements["history-from"]);
   const to = dateInputKey(elements["history-to"]);
   const invalidPeriod = from !== null && to !== null && from > to;
@@ -255,7 +256,8 @@ function filteredAlarmHistory() {
     const date = new Date(entry.occurredAt);
     const day = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
     return (from === null || day >= from) && (to === null || day <= to);
-  }).reverse();
+  });
+  rows.sort((a, b) => sortDirection * (a.occurredAt - b.occurredAt));
   return { rows, invalidPeriod };
 }
 
@@ -443,8 +445,12 @@ elements["history-level"].addEventListener("change", renderAlarmHistory);
 elements["history-status"].addEventListener("change", renderAlarmHistory);
 elements["history-from"].addEventListener("input", renderAlarmHistory);
 elements["history-to"].addEventListener("input", renderAlarmHistory);
+const historySort = elements["history-sort"];
+historySort.addEventListener("change", renderAlarmHistory);
 elements["history-reset"].addEventListener("click", () => {
+  const sortOrder = historySort.value;
   elements["history-filters"].reset();
+  historySort.value = sortOrder;
   renderAlarmHistory();
 });
 elements["history-export"].addEventListener("click", exportAlarmHistory);
