@@ -16,11 +16,19 @@ const zones = [
 const variation = [0, 2, 1, -1, -2, 1, 0, -1];
 const statusLabels = { good: "Норма", warning: "Деградация", critical: "Нет данных" };
 const severityLabels = { warning: "Предупреждение", critical: "Критическая" };
+const alarmTypes = {
+  "rf-off": { title: "Репитер отключён", detail: "RF выключен в тестовом сценарии.", level: "critical" },
+  "low-signal": { title: "Сигнал ниже порога", detail: "Три последовательных отсчёта с низким RSRP или SINR.", level: "warning" },
+  "no-telemetry": { title: "Потеря телеметрии", detail: "Зонд не передаёт данные более 60 секунд.", level: "critical" },
+};
+const alarmSources = new Map([["R1", "R1 · Репитер"], ...zones.map(zone =>
+  [zone.id, `${zone.id} · ${zone.name}`])]);
+const historyStorageKey = "mdpc.monitor.alarmHistory.v1";
 const elements = Object.fromEntries([
   "scenario", "refresh", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
-  "history-zone", "history-level", "history-rows", "history-count",
+  "history-zone", "history-level", "history-rows", "history-count", "history-storage",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -32,16 +40,69 @@ const historyTimeFormat = new Intl.DateTimeFormat("ru-RU", {
   day: "2-digit", month: "2-digit", year: "numeric",
   hour: "2-digit", minute: "2-digit", second: "2-digit",
 });
-const alarmHistory = [];
-const openAlarms = new Map();
+const savedHistory = loadAlarmHistory();
+const alarmHistory = savedHistory.entries;
+const openAlarms = new Map(alarmHistory.filter(entry => entry.recoveredAt === null)
+  .map(entry => [alarmKey(entry), entry]));
 
-let scenario = elements.scenario.value;
+let scenario = savedHistory.scenario;
+elements.scenario.value = scenario;
 let selectedZone = "A2";
 let selectedMetric = "rsrp";
 let samples = [];
 let sequence = 0;
 let lastSeen = new Map();
 let timer;
+
+function alarmKey({ sourceId, type }) {
+  return `${sourceId}/${type}`;
+}
+
+function alarmDetails(sourceId, type) {
+  return { sourceId, type, source: alarmSources.get(sourceId), ...alarmTypes[type] };
+}
+
+function validTime(value) {
+  return Number.isFinite(value) && Math.abs(value) <= 8.64e15;
+}
+
+function loadAlarmHistory() {
+  const fallback = { entries: [], scenario: elements.scenario.value };
+  try {
+    const saved = JSON.parse(localStorage.getItem(historyStorageKey));
+    if (!saved || !Array.isArray(saved.entries)) return fallback;
+    const entries = [];
+    const activeKeys = new Set();
+    for (const entry of saved.entries) {
+      if (!entry || !alarmSources.has(entry.sourceId) || !Object.hasOwn(alarmTypes, entry.type)) continue;
+      const { sourceId, type, occurredAt, recoveredAt } = entry;
+      if ((sourceId === "R1") !== (type === "rf-off")) continue;
+      if (!validTime(occurredAt) || (recoveredAt !== null && (!validTime(recoveredAt) || recoveredAt < occurredAt))) continue;
+      if (recoveredAt === null) {
+        const key = alarmKey(entry);
+        if (activeKeys.has(key)) continue;
+        activeKeys.add(key);
+      }
+      entries.push({ ...alarmDetails(sourceId, type), occurredAt, recoveredAt });
+    }
+    const hasScenario = Array.from(elements.scenario.options).some(option => option.value === saved.scenario);
+    return { entries, scenario: hasScenario ? saved.scenario : fallback.scenario };
+  } catch {
+    return fallback;
+  }
+}
+
+function saveAlarmHistory() {
+  const notice = elements["history-storage"];
+  try {
+    const entries = alarmHistory.map(({ sourceId, type, occurredAt, recoveredAt }) =>
+      ({ sourceId, type, occurredAt, recoveredAt }));
+    localStorage.setItem(historyStorageKey, JSON.stringify({ entries, scenario }));
+    notice.textContent = "История тестовых событий сохраняется в этом браузере.";
+  } catch {
+    notice.textContent = "Хранилище браузера недоступно. Новые записи сохраняются до перезагрузки.";
+  }
+}
 
 function sampleZone(zone, index) {
   if (scenario === "offline" || (scenario === "mixed" && zone.id === "A5" && index >= 3)) {
@@ -120,17 +181,16 @@ function renderZones(states) {
 function getAlarms(states) {
   const alarms = [];
   if (scenario === "offline") {
-    alarms.push({ sourceId: "R1", type: "rf-off", source: "R1 · Репитер", title: "Репитер отключён", detail: "RF выключен в тестовом сценарии.", level: "critical" });
+    alarms.push(alarmDetails("R1", "rf-off"));
   }
   for (const { zone, status } of states) {
-    const source = `${zone.id} · ${zone.name}`;
     if (status === "warning") {
-      alarms.push({ sourceId: zone.id, type: "low-signal", source, title: "Сигнал ниже порога", detail: "Три последовательных отсчёта с низким RSRP или SINR.", level: "warning" });
+      alarms.push(alarmDetails(zone.id, "low-signal"));
     }
     if (status === "critical") {
       const age = samples.at(-1).time - lastSeen.get(zone.id);
       if (age > 60_000) {
-        alarms.push({ sourceId: zone.id, type: "no-telemetry", source, title: "Потеря телеметрии", detail: "Зонд не передаёт данные более 60 секунд.", level: "critical" });
+        alarms.push(alarmDetails(zone.id, "no-telemetry"));
       }
     }
   }
@@ -146,21 +206,25 @@ function renderAlarms(alarms) {
 }
 
 function updateAlarmHistory(alarms, time) {
+  let changed = false;
   const activeKeys = new Set();
   for (const alarm of alarms) {
-    const key = `${alarm.sourceId}/${alarm.type}`;
+    const key = alarmKey(alarm);
     activeKeys.add(key);
     if (openAlarms.has(key)) continue;
     const entry = { ...alarm, occurredAt: time, recoveredAt: null };
     alarmHistory.push(entry);
     openAlarms.set(key, entry);
+    changed = true;
   }
   for (const [key, entry] of openAlarms) {
     if (!activeKeys.has(key)) {
-      entry.recoveredAt = time;
+      entry.recoveredAt = Math.max(entry.occurredAt, time);
       openAlarms.delete(key);
+      changed = true;
     }
   }
+  return changed;
 }
 
 function historyTime(time) {
@@ -255,7 +319,7 @@ function renderChart() {
   </svg>`;
 }
 
-function render({ recordAlarms = false } = {}) {
+function render({ recordAlarms = false, scenarioChanged = false } = {}) {
   const states = zones.map(zone => ({ zone, status: zoneStatus(zone) }));
   const alarms = getAlarms(states);
   renderSummary(states);
@@ -265,7 +329,8 @@ function render({ recordAlarms = false } = {}) {
   renderChart();
   const time = new Date(samples.at(-1).time);
   if (recordAlarms) {
-    updateAlarmHistory(alarms, time.getTime());
+    const historyChanged = updateAlarmHistory(alarms, time.getTime());
+    if (historyChanged || scenarioChanged) saveAlarmHistory();
     renderAlarmHistory();
   }
   elements.updated.dateTime = time.toISOString();
@@ -278,7 +343,7 @@ function reset() {
   samples = Array.from({ length: sampleCount }, (_, index) =>
     makeSample(index, now - (sampleCount - 1 - index) * interval));
   sequence = sampleCount;
-  render({ recordAlarms: true });
+  render({ recordAlarms: true, scenarioChanged: true });
   restartTimer();
 }
 

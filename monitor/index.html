@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#121616">
   <title>Мониторинг связи · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="monitor.js" defer></script>
+  <script src="monitor.js?v=alarm-storage-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -86,7 +86,7 @@
     </div>
     <section class="panel alarm-history" id="alarm-history" aria-labelledby="alarm-history-title">
       <header class="panel-heading">
-        <div><h2 id="alarm-history-title">Журнал тревог</h2><p>История тестовых событий в текущей сессии</p></div>
+        <div><h2 id="alarm-history-title">Журнал тревог</h2><p id="history-storage">История тестовых событий сохраняется в этом браузере.</p></div>
         <span class="history-count" id="history-count" aria-live="polite"></span>
       </header>
       <div class="history-filters" role="group" aria-label="Фильтры журнала">
