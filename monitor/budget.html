@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#121616">
   <title>Бюджет радиолинии · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="budget.css">
-  <script src="budget.js" defer></script>
+  <link rel="stylesheet" href="budget.css?v=csv-1">
+  <script src="budget.js?v=csv-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -36,7 +36,10 @@
     <section class="panel" aria-labelledby="result-title">
       <header class="panel-heading">
         <div><h2 id="result-title">Покрытие по зонам</h2><p id="budget-target"></p></div>
-        <span class="budget-total" id="budget-total"></span>
+        <div class="budget-actions">
+          <span class="budget-total" id="budget-total"></span>
+          <button class="history-export" id="budget-export" type="button" disabled>Скачать CSV</button>
+        </div>
       </header>
       <p class="budget-hint" id="budget-summary" role="status"></p>
       <div class="table-scroll" role="region" aria-label="Матрица расчётного покрытия" tabindex="0">

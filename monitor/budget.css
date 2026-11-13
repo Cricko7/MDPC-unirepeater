@@ -12,6 +12,11 @@
 .budget-hint:empty { display: none; }
 .budget-hint.warning { padding-top: 12px; }
 .budget-total { font-weight: 650; color: var(--green); font-size: .9rem; }
+.budget-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.budget-actions button {
+  min-height: 39px; padding: 6px 12px; border: 1px solid var(--line);
+  border-radius: 8px; font-size: .85rem; font-weight: 650;
+}
 .budget-result-value { display: block; font-weight: 650; }
 .budget-result-reserve { display: block; margin-top: 3px; }
 .budget-note { font-size: .85rem; padding-bottom: 22px; }

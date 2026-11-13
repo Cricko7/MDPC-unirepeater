@@ -53,7 +53,9 @@ function readCarrier({ fields, name }, problems) {
   fields.power.setAttribute("aria-invalid", String(!powerValid));
   if (!frequencyValid) problems.push(`${name}: частота центра должна быть от ${lower} до ${upper} МГц.`);
   if (!powerValid) problems.push(`${name}: укажите мощность несущей.`);
-  return frequencyValid && powerValid ? { frequency, width, power } : null;
+  return frequencyValid && powerValid
+    ? { name, band: fields.band.value, frequency, width, power, useEdge }
+    : null;
 }
 
 function rsrp(carrier, zone) {
@@ -63,6 +65,25 @@ function rsrp(carrier, zone) {
   const referenceCorrection = 10 * Math.log10(12 * blocks[carrier.width]);
   // As in the Python model, 8 dBi panel gain offsets 8 dB handset loss.
   return carrier.power - feeder - freeSpace - zone.zone_loss_db - referenceCorrection;
+}
+
+function downloadBudget(rows) {
+  const headers = ["Оператор", "Зона", "Диапазон LTE", "Частота DL для расчёта, МГц",
+    "Режим частоты", "Ширина несущей, МГц", "Мощность на входе DAS, дБм",
+    "RSRP, дБм", "Запас до порога, дБ"];
+  const csv = [headers, ...rows].map(row => row.map(value => {
+    const field = typeof value === "number" ? String(value).replace(".", ",") : value;
+    return `"${field.replaceAll('"', '""')}"`;
+  }).join(";")).join("\r\n");
+  const file = new Blob(["\uFEFF", csv, "\r\n"], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "mdpc-link-budget.csv";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function setup(scenario) {
@@ -82,10 +103,15 @@ function setup(scenario) {
     header.append(cell);
   }
   const body = table.createTBody();
+  const exportButton = document.getElementById("budget-export");
+  let exportRows = [];
+  exportButton.addEventListener("click", () => downloadBudget(exportRows));
 
   function render() {
     const problems = [];
     const carriers = operators.map(operator => readCarrier(operator, problems));
+    exportRows = [];
+    exportButton.disabled = problems.length > 0;
     errors.textContent = problems.join(" ");
     let count = 0;
     const resultRows = scenario.zones.map(zone => {
@@ -102,6 +128,9 @@ function setup(scenario) {
         }
         const value = rsrp(carrier, zone);
         const margin = value - target;
+        exportRows.push([carrier.name, zone.id, carrier.band, carrier.frequency,
+          carrier.useEdge ? "Верхняя граница" : "Центр несущей", carrier.width, carrier.power,
+          value.toFixed(2).replace(".", ","), margin.toFixed(2).replace(".", ",")]);
         if (margin >= reserve) count += 1;
         cell.className = margin >= reserve ? "good" : "warning";
         cell.innerHTML = `<strong class="budget-result-value">${format.format(value)} дБм</strong>
@@ -115,7 +144,7 @@ function setup(scenario) {
     const summary = document.getElementById("budget-summary");
     if (carriers.some(carrier => carrier === null)) {
       total.textContent = "";
-      summary.textContent = "Общий итог появится после исправления параметров всех несущих.";
+      summary.textContent = "Общий итог и экспорт CSV доступны после исправления параметров всех несущих.";
       return;
     }
     const peak = Math.max(...carriers.map(carrier => carrier.power));
