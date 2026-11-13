@@ -29,7 +29,7 @@ const elements = Object.fromEntries([
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
-  "history-status", "history-from", "history-to",
+  "history-status", "history-from", "history-to", "history-filters", "history-reset",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -443,6 +443,10 @@ elements["history-level"].addEventListener("change", renderAlarmHistory);
 elements["history-status"].addEventListener("change", renderAlarmHistory);
 elements["history-from"].addEventListener("input", renderAlarmHistory);
 elements["history-to"].addEventListener("input", renderAlarmHistory);
+elements["history-reset"].addEventListener("click", () => {
+  elements["history-filters"].reset();
+  renderAlarmHistory();
+});
 elements["history-export"].addEventListener("click", exportAlarmHistory);
 for (const button of metricButtons) {
   button.addEventListener("click", () => {

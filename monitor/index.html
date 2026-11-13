@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#121616">
   <title>Мониторинг связи · МЦОД Датарк</title>
-  <link rel="stylesheet" href="styles.css?v=alarm-period-1">
-  <script src="monitor.js?v=alarm-status-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=alarm-reset-1">
+  <script src="monitor.js?v=alarm-reset-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -89,7 +89,7 @@
         <div><h2 id="alarm-history-title">Журнал тревог</h2><p id="history-storage">История тестовых событий сохраняется в этом браузере.</p></div>
         <span class="history-count" id="history-count" aria-live="polite"></span>
       </header>
-      <div class="history-filters" role="group" aria-label="Фильтры журнала">
+      <form class="history-filters" id="history-filters" aria-label="Фильтры журнала">
         <label for="history-zone">Зона или устройство
           <select id="history-zone"><option value="">Все зоны и репитер</option></select>
         </label>
@@ -119,8 +119,11 @@
           </div>
           <p class="sr-only" id="history-period-hint">Обе даты включены. Используется местное время браузера.</p>
         </fieldset>
-        <button class="history-export" id="history-export" type="button" disabled>Скачать CSV</button>
-      </div>
+        <div class="history-actions">
+          <button class="history-reset" id="history-reset" type="button">Сбросить фильтры</button>
+          <button class="history-export" id="history-export" type="button" disabled>Скачать CSV</button>
+        </div>
+      </form>
       <div class="table-scroll history-scroll" role="region" aria-label="Записи журнала тревог" tabindex="0">
         <table>
           <thead><tr><th scope="col">Источник и событие</th><th scope="col">Критичность</th><th scope="col">Возникновение</th><th scope="col">Восстановление</th></tr></thead>
