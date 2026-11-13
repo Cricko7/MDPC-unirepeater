@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#121616">
+  <title>Мониторинг связи · МЦОД Датарк</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="monitor.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <div class="brand"><span class="brand-icon" aria-hidden="true">▂▅▇</span><div><strong>МЦОД Датарк</strong><span>LTE Band 1 · мониторинг связи</span></div></div>
+      <span class="demo"><i></i> Тестовые данные</span>
+    </div>
+  </header>
+  <main class="shell">
+    <div class="page-heading">
+      <div><h1>Мониторинг связи</h1><p>Репитер R1 и пять зон покрытия</p></div>
+      <div class="controls">
+        <label for="scenario">Сценарий</label>
+        <select id="scenario">
+          <option value="mixed">Деградация и потеря связи</option>
+          <option value="normal">Штатная работа</option>
+          <option value="offline">Репитер отключён</option>
+        </select>
+        <button class="refresh" id="refresh" type="button">Обновить</button>
+      </div>
+    </div>
+    <div class="summary" id="summary" aria-label="Состояние системы"></div>
+    <div class="dashboard">
+      <section class="panel zones" aria-labelledby="zones-title">
+        <header class="panel-heading">
+          <div><h2 id="zones-title">Зоны покрытия</h2><p>Пороги · RSRP ≥ −100 дБм · SINR ≥ 5 дБ</p></div>
+          <a href="../docs/mdpc-radio-layout.png" target="_blank" rel="noopener">План МЦОД ↗</a>
+        </header>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">Зона</th><th scope="col">RSRP <small>дБм</small></th><th scope="col">SINR <small>дБ</small></th><th scope="col">Статус</th></tr></thead>
+            <tbody id="zones"></tbody>
+          </table>
+        </div>
+        <section class="trend" aria-labelledby="trend-title">
+          <div class="trend-heading">
+            <div><h3 id="trend-title"></h3><p>Последние 8 отсчётов</p></div>
+            <div class="toggle" role="group" aria-label="Метрика графика">
+              <button type="button" data-metric="rsrp" aria-pressed="true">RSRP</button>
+              <button type="button" data-metric="sinr" aria-pressed="false">SINR</button>
+            </div>
+          </div>
+          <div class="chart" id="chart"></div>
+        </section>
+      </section>
+      <section class="panel alarms" aria-labelledby="alarms-title">
+        <header class="panel-heading"><div><h2 id="alarms-title">Активные тревоги</h2><p>Репитер и зонды покрытия</p></div><span class="alarm-count" id="alarm-count"></span></header>
+        <ul id="alarms"></ul>
+        <p class="alarm-rule">Деградация фиксируется после трёх отсчётов ниже порога. Потеря телеметрии — после 60 секунд без данных.</p>
+      </section>
+    </div>
+    <footer><span>Интервал симуляции · 15 с</span><time id="updated"></time></footer>
+    <p class="sr-only" id="announcement" role="status"></p>
+  </main>
+</body>
+</html>
