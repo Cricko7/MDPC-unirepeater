@@ -7,7 +7,7 @@
   <title>Бюджет радиолинии · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="budget.css?v=coverage-1">
-  <script src="budget.js?v=coverage-1" defer></script>
+  <script src="budget.js?v=gsm-csv-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -74,6 +74,7 @@
     <section class="panel" aria-labelledby="gsm-title">
       <header class="panel-heading">
         <div><h2 id="gsm-title">Проверка тестового GSM-канала</h2><p>Прямое перекрытие LTE и потенциальные продукты IM3 в полосах GSM UL и DL.</p></div>
+        <div class="budget-actions"><button class="history-export" id="gsm-export" type="button" disabled>Скачать CSV проверки GSM</button></div>
       </header>
       <div class="gsm-controls">
         <label class="budget-control">Диапазон GSM

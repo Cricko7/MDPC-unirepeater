@@ -94,7 +94,7 @@ function renderGsm(carriers) {
   findings.replaceChildren();
   if (!channel) {
     result.textContent = "Введите допустимый целый ARFCN для выбранного диапазона.";
-    return;
+    return null;
   }
 
   const signals = carriers.filter(carrier => carrier && !carrier.useEdge).flatMap(carrier => [
@@ -105,35 +105,60 @@ function renderGsm(carriers) {
     { label: "GSM UL", ...frequencyRange(channel.ul, 0.2) },
     { label: "GSM DL", ...frequencyRange(channel.dl, 0.2) },
   ];
-  function check(signal, description) {
+  const hits = [];
+  function check(signal, type, source) {
     for (const target of targets) {
       const overlap = Math.min(signal.high, target.high) - Math.max(signal.low, target.low);
       if (overlap <= 1e-9) continue;
-      const item = document.createElement("li");
-      item.textContent = `${description} → ${target.label} (${format.format(signal.low)}–${format.format(signal.high)} МГц)`;
-      findings.append(item);
+      hits.push({ type, source, target: target.label, low: signal.low, high: signal.high });
     }
   }
   for (const signal of signals) {
-    check(signal, `Прямое перекрытие · ${signal.label}`);
+    check(signal, "Прямое перекрытие", signal.label);
     for (const other of signals) {
       if (signal === other) continue;
       check({ low: 2 * signal.low - other.high, high: 2 * signal.high - other.low },
-        `IM3 · 2 × ${signal.label} − ${other.label}`);
+        "IM3", `2 × ${signal.label} − ${other.label}`);
     }
   }
   const missing = carriers.length - signals.length / 2;
-  const summary = findings.childElementCount
-    ? `Пересечений: ${findings.childElementCount}.`
+  for (const { type, source, target, low, high } of hits) {
+    const item = document.createElement("li");
+    item.textContent = `${type} · ${source} → ${target} (${format.format(low)}–${format.format(high)} МГц)`;
+    findings.append(item);
+  }
+  const summary = hits.length
+    ? `Пересечений: ${hits.length}.`
     : signals.length ? "Для заданных несущих пересечений не найдено." : "Задайте центры LTE-несущих для проверки.";
   result.textContent = `GSM UL ${format.format(channel.ul)} МГц · DL ${format.format(channel.dl)} МГц. ${summary}`
     + (missing ? ` Вне проверки несущих: ${missing} (центр не задан или параметры некорректны).` : "");
+  return {
+    band: band === "1800" ? "DCS 1800" : "E-GSM 900",
+    arfcn: input.valueAsNumber, channel, hits, summary,
+    checked: signals.length / 2, missing,
+  };
+}
+
+function downloadGsm({ band, arfcn, channel, hits, summary, checked, missing }) {
+  const headers = ["Диапазон GSM", "ARFCN", "GSM UL, МГц", "GSM DL, МГц",
+    "Проверено несущих", "Вне проверки", "Итог", "Тип пересечения",
+    "Источник LTE или формула IM3", "Направление GSM", "Нижняя граница, МГц", "Верхняя граница, МГц"];
+  const mhz = value => value.toFixed(2).replace(".", ",");
+  const prefix = [band, arfcn, mhz(channel.ul), mhz(channel.dl), checked, missing, summary];
+  const rows = hits.map(({ type, source, target, low, high }) =>
+    [...prefix, type, source, target, mhz(low), mhz(high)]);
+  if (!rows.length) rows.push([...prefix, "", "", "", "", ""]);
+  downloadCsv("mdpc-gsm-check.csv", headers, rows);
 }
 
 function downloadBudget(rows) {
   const headers = ["Оператор", "Зона", "Диапазон LTE", "Частота DL для расчёта, МГц",
     "Режим частоты", "Ширина несущей, МГц", "Мощность на входе DAS, дБм",
     "RSRP, дБм", "Запас до порога, дБ"];
+  downloadCsv("mdpc-link-budget.csv", headers, rows);
+}
+
+function downloadCsv(filename, headers, rows) {
   const csv = [headers, ...rows].map(row => row.map(value => {
     const field = typeof value === "number" ? String(value).replace(".", ",") : value;
     return `"${field.replaceAll('"', '""')}"`;
@@ -142,7 +167,7 @@ function downloadBudget(rows) {
   const url = URL.createObjectURL(file);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "mdpc-link-budget.csv";
+  link.download = filename;
   document.body.append(link);
   link.click();
   link.remove();
@@ -198,6 +223,11 @@ function setup(scenario) {
   }
 
   const exportButton = document.getElementById("budget-export");
+  const gsmExport = document.getElementById("gsm-export");
+  let gsmReport = null;
+  gsmExport.addEventListener("click", () => {
+    if (gsmReport) downloadGsm(gsmReport);
+  });
   let exportRows = [];
   exportButton.addEventListener("click", () => downloadBudget(exportRows));
 
@@ -213,7 +243,8 @@ function setup(scenario) {
       return { value, margin: value - target };
     })]));
     renderMap();
-    renderGsm(carriers);
+    gsmReport = renderGsm(carriers);
+    gsmExport.disabled = !gsmReport;
     let count = 0;
     const resultRows = scenario.zones.map(zone => {
       const row = document.createElement("tr");
