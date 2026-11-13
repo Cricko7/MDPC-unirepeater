@@ -24,6 +24,7 @@ const alarmTypes = {
 const alarmSources = new Map([["R1", "R1 · Репитер"], ...zones.map(zone =>
   [zone.id, `${zone.id} · ${zone.name}`])]);
 const historyStorageKey = "mdpc.monitor.alarmHistory.v1";
+const historyPageSizeKey = "mdpc.monitor.historyPageSize";
 const elements = Object.fromEntries([
   "scenario", "refresh", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
@@ -464,7 +465,23 @@ elements["history-from"].addEventListener("input", showFirstHistoryPage);
 elements["history-to"].addEventListener("input", showFirstHistoryPage);
 const historySort = elements["history-sort"];
 historySort.addEventListener("change", showFirstHistoryPage);
-elements["history-page-size"].addEventListener("change", showFirstHistoryPage);
+const historyPageSize = elements["history-page-size"];
+try {
+  const savedSize = localStorage.getItem(historyPageSizeKey);
+  if (Array.from(historyPageSize.options).some(option => option.value === savedSize)) {
+    historyPageSize.value = savedSize;
+  }
+} catch {
+  // Keep the default when browser storage is unavailable.
+}
+historyPageSize.addEventListener("change", () => {
+  try {
+    localStorage.setItem(historyPageSizeKey, historyPageSize.value);
+  } catch {
+    // The current selection still applies without browser storage.
+  }
+  showFirstHistoryPage();
+});
 elements["history-reset"].addEventListener("click", () => {
   const sortOrder = historySort.value;
   elements["history-filters"].reset();
