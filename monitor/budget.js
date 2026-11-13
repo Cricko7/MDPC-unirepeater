@@ -40,11 +40,15 @@ function carrierRow(operator) {
   for (const [key, label] of Object.entries({ band: "Диапазон", frequency: "Частота DL, МГц", width: "Ширина, МГц", power: "Мощность, дБм" })) {
     fields[key].setAttribute("aria-label", `${operator.name}: ${label}`);
   }
+  resetCarrier(fields, operator);
+  return { row, fields, name: operator.name, defaults: operator };
+}
+
+function resetCarrier(fields, operator) {
   fields.band.value = operator.band;
   fields.frequency.value = operator.dl_mhz ?? "";
   fields.power.value = operator.das_dl_dbm;
   setWidths(fields.width, bands[operator.band], operator.bandwidth_mhz);
-  return { row, fields, name: operator.name };
 }
 
 function readCarrier({ fields, name }, problems) {
@@ -342,7 +346,15 @@ function setup(scenario) {
     saveAndRender();
   });
   gsmArfcn.addEventListener("input", saveAndRender);
+  const resetButton = document.getElementById("budget-reset");
+  resetButton.addEventListener("click", () => {
+    for (const { fields, defaults } of operators) resetCarrier(fields, defaults);
+    gsmBand.selectedIndex = 0;
+    gsmArfcn.value = gsmArfcn.defaultValue;
+    saveAndRender();
+  });
   render();
+  resetButton.disabled = false;
 }
 
 fetch("../tools/mdpc-scenario.json")

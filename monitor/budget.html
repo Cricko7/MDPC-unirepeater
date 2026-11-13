@@ -7,7 +7,7 @@
   <title>Бюджет радиолинии · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="budget.css?v=coverage-1">
-  <script src="budget.js?v=budget-settings-1" defer></script>
+  <script src="budget.js?v=budget-reset-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -23,6 +23,7 @@
     <section class="panel" aria-labelledby="carriers-title">
       <header class="panel-heading">
         <div><h2 id="carriers-title">Несущие LTE</h2><p>Мощность каждой несущей задаётся на общем входе DAS после узла объединения.</p></div>
+        <div class="budget-actions"><button class="history-reset" id="budget-reset" type="button" disabled>Сбросить настройки</button></div>
       </header>
       <p class="budget-hint" id="frequency-hint">Пустая частота использует верхнюю границу диапазона для оценки потерь. Указанная частота считается центром несущей DL.</p>
       <form id="budget-carriers" class="table-scroll">
