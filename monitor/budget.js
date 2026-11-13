@@ -153,6 +153,13 @@ function renderGsm(carriers) {
     return null;
   }
 
+  const report = checkGsm(carriers, band, input.valueAsNumber, channel);
+  findings.append(...gsmFindingItems(report.hits));
+  result.textContent = gsmSummary(report);
+  return report;
+}
+
+function checkGsm(carriers, band, arfcn, channel) {
   const signals = carriers.filter(carrier => carrier && !carrier.useEdge).flatMap(carrier => [
     { label: `${carrier.name} DL`, ...frequencyRange(carrier.frequency, carrier.width) },
     { label: `${carrier.name} UL`, ...frequencyRange(carrier.frequency - bands[carrier.band].duplex, carrier.width) },
@@ -178,21 +185,27 @@ function renderGsm(carriers) {
     }
   }
   const missing = carriers.length - signals.length / 2;
-  for (const { type, source, target, low, high } of hits) {
-    const item = document.createElement("li");
-    item.textContent = `${type} · ${source} → ${target} (${format.format(low)}–${format.format(high)} МГц)`;
-    findings.append(item);
-  }
   const summary = hits.length
     ? `Пересечений: ${hits.length}.`
     : signals.length ? "Для заданных несущих пересечений не найдено." : "Задайте центры LTE-несущих для проверки.";
-  result.textContent = `GSM UL ${format.format(channel.ul)} МГц · DL ${format.format(channel.dl)} МГц. ${summary}`
-    + (missing ? ` Вне проверки несущих: ${missing} (центр не задан или параметры некорректны).` : "");
   return {
     band: band === "1800" ? "DCS 1800" : "E-GSM 900",
-    arfcn: input.valueAsNumber, channel, hits, summary,
+    arfcn, channel, hits, summary,
     checked: signals.length / 2, missing,
   };
+}
+
+function gsmSummary({ channel, summary, missing }) {
+  return `GSM UL ${format.format(channel.ul)} МГц · DL ${format.format(channel.dl)} МГц. ${summary}`
+    + (missing ? ` Вне проверки несущих: ${missing} (центр не задан или параметры некорректны).` : "");
+}
+
+function gsmFindingItems(hits) {
+  return hits.map(({ type, source, target, low, high }) => {
+    const item = document.createElement("li");
+    item.textContent = `${type} · ${source} → ${target} (${format.format(low)}–${format.format(high)} МГц)`;
+    return item;
+  });
 }
 
 function downloadGsm({ band, arfcn, channel, hits, summary, checked, missing }) {
@@ -239,7 +252,112 @@ function readScenarios() {
     typeof entry?.name === "string" && entry.name.trim() && entry.name.length <= 60) : [];
 }
 
-function setupNamedScenarios(operators, currentSettings, applySettings, saveAndRender) {
+function comparisonTable(id, caption, columns, rows) {
+  const table = document.getElementById(id);
+  table.replaceChildren();
+  table.createCaption().textContent = caption;
+  const header = table.createTHead().insertRow();
+  for (const title of columns) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = title;
+    header.append(cell);
+  }
+  const body = table.createTBody();
+  for (const [label, ...values] of rows) {
+    const row = body.insertRow();
+    const cell = document.createElement("th");
+    cell.scope = "row";
+    cell.textContent = label;
+    row.append(cell);
+    for (const value of values) row.insertCell().textContent = value;
+  }
+}
+
+function scenarioComparison(operators, scenario) {
+  const selects = ["compare-a", "compare-b"].map(id => document.getElementById(id));
+  const status = document.getElementById("compare-status");
+  const results = document.getElementById("compare-results");
+  let entries = [];
+
+  function render() {
+    results.hidden = true;
+    if (entries.length < 2) {
+      status.textContent = "Сохраните два сценария для сравнения.";
+      return;
+    }
+    if (!selects.every(select => select.value) || selects[0].value === selects[1].value) {
+      status.textContent = "Выберите два разных сценария.";
+      return;
+    }
+    const pair = selects.map(select => entries.find(entry => entry.name === select.value));
+    let carriers;
+    try {
+      carriers = pair.map(({ settings }) => {
+        validateImportedSettings(settings, operators);
+        return operators.map(({ name }) => {
+          const { band, width, frequency, power } = settings.carriers[name];
+          return { name, band, width, frequency: frequency === "" ? bands[band].max : Number(frequency),
+            power: Number(power), useEdge: frequency === "" };
+        });
+      });
+    } catch (error) {
+      status.textContent = `Сравнение недоступно. ${error.message}`;
+      return;
+    }
+    status.textContent = "Разница рассчитана как B − A по сохранённым параметрам.";
+    const headings = pair.map(({ name }, index) => `${index === 0 ? "A" : "B"} · ${name}`);
+    const carrierText = ({ band, width, frequency, power, useEdge }) =>
+      `${band} · ${format.format(frequency)} МГц${useEdge ? " (край диапазона)" : ""} · ${width} МГц · ${signed.format(power)} дБм`;
+    comparisonTable("compare-carriers", "Параметры LTE · частота DL, ширина, мощность на входе DAS",
+      ["Оператор", ...headings], operators.map(({ name }, index) =>
+        [name, ...carriers.map(side => carrierText(side[index]))]));
+
+    const target = scenario.rsrp_target_dbm;
+    const coverageText = value => `${format.format(value)} дБм · запас ${signed.format(value - target)} дБ`;
+    comparisonTable("compare-coverage", "RSRP и запас по зонам",
+      ["Оператор · зона", ...headings, "Δ RSRP / Δ запаса, дБ"],
+      operators.flatMap(({ name }, index) => scenario.zones.map(zone => {
+        const [a, b] = carriers.map(side => rsrp(side[index], zone));
+        const delta = signed.format(b - a);
+        return [`${name} · ${zone.id}`, coverageText(a), coverageText(b), `${delta} / ${delta}`];
+      })));
+
+    document.getElementById("compare-gsm").replaceChildren(...pair.map(({ settings }, index) => {
+      const { band, arfcn } = settings.gsm;
+      const number = Number(arfcn);
+      const report = checkGsm(carriers[index], band, number, gsmChannel(band, number));
+      const card = document.createElement("article");
+      const heading = document.createElement("h3");
+      heading.textContent = `GSM · ${headings[index]}`;
+      const summary = document.createElement("p");
+      summary.textContent = `${report.band} · ARFCN ${report.arfcn}. ${gsmSummary(report)}`;
+      card.append(heading, summary);
+      if (report.hits.length) {
+        const list = document.createElement("ul");
+        list.append(...gsmFindingItems(report.hits));
+        card.append(list);
+      }
+      return card;
+    }));
+    results.hidden = false;
+  }
+
+  for (const select of selects) select.addEventListener("change", render);
+  return (updated, renamed = {}) => {
+    entries = updated;
+    for (const select of selects) {
+      const previous = Object.hasOwn(renamed, select.value) ? renamed[select.value] : select.value;
+      select.replaceChildren(new Option("Выберите сценарий", ""),
+        ...entries.map(({ name }) => new Option(name, name)));
+      if (entries.some(entry => entry.name === previous)) select.value = previous;
+      select.disabled = entries.length < 2;
+    }
+    render();
+  };
+}
+
+function setupNamedScenarios(operators, currentSettings, applySettings, saveAndRender, updateComparison) {
   const form = document.getElementById("budget-scenario-form");
   const nameInput = document.getElementById("budget-scenario-name");
   const list = document.getElementById("budget-scenario-list");
@@ -263,10 +381,11 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
     for (const button of [loadButton, copyButton, renameButton, deleteButton]) button.disabled = !list.value;
   }
 
-  function writeScenarios(updated, selected) {
+  function writeScenarios(updated, selected, renamed) {
     localStorage.setItem(scenariosKey, JSON.stringify(updated));
     scenarios = updated;
     updateList(selected);
+    updateComparison(scenarios, renamed);
   }
 
   function requestName(message, defaultName) {
@@ -284,6 +403,7 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
     status.textContent = "Сохранённые сценарии не удалось прочитать.";
   }
   updateList();
+  updateComparison(scenarios);
   saveButton.disabled = false;
 
   list.addEventListener("change", updateActions);
@@ -334,6 +454,7 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
       if (!source) {
         scenarios = latest;
         updateList();
+        updateComparison(scenarios);
         status.textContent = "Выбранный сценарий отсутствует в хранилище.";
         return;
       }
@@ -361,6 +482,7 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
       if (!latest.some(entry => entry.name === previousName)) {
         scenarios = latest;
         updateList();
+        updateComparison(scenarios);
         status.textContent = "Выбранный сценарий отсутствует в хранилище.";
         return;
       }
@@ -368,7 +490,8 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
         status.textContent = `Имя «${name}» уже используется.`;
         return;
       }
-      writeScenarios(latest.map(entry => entry.name === previousName ? { ...entry, name } : entry), name);
+      writeScenarios(latest.map(entry => entry.name === previousName ? { ...entry, name } : entry),
+        name, { [previousName]: name });
       if (nameInput.value.trim() === previousName) nameInput.value = name;
       status.textContent = `Сценарий переименован в «${name}».`;
     } catch {
@@ -591,7 +714,7 @@ function setup(scenario) {
     saveAndRender();
   });
   render();
-  setupNamedScenarios(operators, currentSettings, applySettings, saveAndRender);
+  setupNamedScenarios(operators, currentSettings, applySettings, saveAndRender, scenarioComparison(operators, scenario));
   resetButton.disabled = false;
   importButton.disabled = false;
 }

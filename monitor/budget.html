@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#121616">
   <title>Бюджет радиолинии · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="budget.css?v=scenarios-1">
-  <script src="budget.js?v=scenarios-3" defer></script>
+  <link rel="stylesheet" href="budget.css?v=scenario-comparison-1">
+  <script src="budget.js?v=scenario-comparison-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -38,6 +38,24 @@
         </div>
       </div>
       <p class="budget-hint" id="budget-scenario-status" role="status"></p>
+    </section>
+    <section class="panel" aria-labelledby="compare-title">
+      <header class="panel-heading"><h2 id="compare-title">Сравнение сценариев</h2></header>
+      <div class="budget-actions comparison-controls">
+        <label class="budget-control">Сценарий A <select id="compare-a" disabled></select></label>
+        <label class="budget-control">Сценарий B <select id="compare-b" disabled></select></label>
+      </div>
+      <p class="budget-hint" id="compare-status" role="status">Сохраните два сценария для сравнения.</p>
+      <div id="compare-results" hidden>
+        <div class="table-scroll" role="region" aria-label="Сравнение параметров LTE" tabindex="0">
+          <table id="compare-carriers"></table>
+        </div>
+        <div class="table-scroll" role="region" aria-label="Сравнение покрытия" tabindex="0">
+          <table id="compare-coverage"></table>
+        </div>
+        <div class="comparison-gsm" id="compare-gsm"></div>
+        <p class="budget-hint">Перекрытия и IM3 рассчитаны для несущих с заданными центрами. Влияние на доставку SMS проверяется на стенде.</p>
+      </div>
     </section>
     <section class="panel" aria-labelledby="carriers-title">
       <header class="panel-heading">

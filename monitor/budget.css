@@ -21,6 +21,15 @@
 .budget-scenarios input, .budget-scenarios select { width: min(100%, 240px); }
 .budget-scenarios .budget-control { min-width: 0; }
 .budget-scenarios button:disabled { cursor: default; opacity: .65; }
+.comparison-controls { padding: 0 18px 12px; }
+.comparison-controls select { max-width: min(220px, 100%); }
+#compare-results caption { text-align: left; padding: 14px 18px 8px; font-weight: 650; }
+#compare-results th, #compare-results td { white-space: normal; overflow-wrap: anywhere; }
+.comparison-gsm { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px 18px 12px; }
+.comparison-gsm article { padding: 12px; border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+.comparison-gsm p, .comparison-gsm li { font-size: .85rem; }
+.comparison-gsm p { margin-top: 5px; }
+.comparison-gsm ul { margin-bottom: 0; padding-left: 18px; }
 .budget-result-value { display: block; font-weight: 650; }
 .budget-result-reserve { display: block; margin-top: 3px; }
 .budget-note { font-size: .85rem; padding-bottom: 22px; }
@@ -38,4 +47,5 @@
 .gsm-findings li + li { margin-top: 5px; }
 @media (max-width: 650px) {
   .budget-map-grid { grid-template-columns: minmax(0, 1fr); }
+  .comparison-gsm { grid-template-columns: minmax(0, 1fr); }
 }
