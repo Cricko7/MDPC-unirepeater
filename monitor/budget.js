@@ -208,16 +208,48 @@ function gsmFindingItems(hits) {
   });
 }
 
-function downloadGsm({ band, arfcn, channel, hits, summary, checked, missing }) {
-  const headers = ["Диапазон GSM", "ARFCN", "GSM UL, МГц", "GSM DL, МГц",
-    "Проверено несущих", "Вне проверки", "Итог", "Тип пересечения",
-    "Источник LTE или формула IM3", "Направление GSM", "Нижняя граница, МГц", "Верхняя граница, МГц"];
+const gsmCsvHeaders = ["Диапазон GSM", "ARFCN", "GSM UL, МГц", "GSM DL, МГц",
+  "Проверено несущих", "Вне проверки", "Итог", "Тип пересечения",
+  "Источник LTE или формула IM3", "Направление GSM", "Нижняя граница, МГц", "Верхняя граница, МГц"];
+
+function gsmCsvRows({ band, arfcn, channel, hits, summary, checked, missing }) {
   const mhz = value => value.toFixed(2).replace(".", ",");
   const prefix = [band, arfcn, mhz(channel.ul), mhz(channel.dl), checked, missing, summary];
   const rows = hits.map(({ type, source, target, low, high }) =>
     [...prefix, type, source, target, mhz(low), mhz(high)]);
   if (!rows.length) rows.push([...prefix, "", "", "", "", ""]);
-  downloadCsv("mdpc-gsm-check.csv", headers, rows);
+  return rows;
+}
+
+function downloadGsm(report) {
+  downloadCsv("mdpc-gsm-check.csv", gsmCsvHeaders, gsmCsvRows(report));
+}
+
+function downloadComparison({ headings, coverage, reports, target }) {
+  const scenarioLabels = headings.map(heading => /^[=+\-@＝＋－＠\t\r\n]/u.test(heading) ? `'${heading}` : heading);
+  const lteHeaders = ["Диапазон LTE", "Частота DL для расчёта, МГц", "Режим частоты",
+    "Ширина несущей, МГц", "Мощность на входе DAS, дБм", "RSRP, дБм", "Запас до порога, дБ"];
+  const coverageHeaders = ["Оператор", "Зона", "Порог RSRP, дБм",
+    ...["A", "B"].flatMap(side => lteHeaders.map(header => `${side} · ${header}`)),
+    "Δ RSRP B − A, дБ", "Δ запаса B − A, дБ"];
+  const emptyGsm = Array(gsmCsvHeaders.length).fill("");
+  const emptyCoverage = Array(coverageHeaders.length).fill("");
+  const decimal = value => value.toFixed(2).replace(".", ",");
+  const rows = coverage.map(({ name, zone, carriers, values, delta }) => [
+    "Покрытие", ...scenarioLabels, "", name, zone, target,
+    ...carriers.flatMap(({ band, frequency, useEdge, width, power }, index) => [
+      band, frequency, useEdge ? "Верхняя граница" : "Центр несущей", width, power,
+      decimal(values[index]), decimal(values[index] - target),
+    ]),
+    decimal(delta), decimal(delta), ...emptyGsm,
+  ]);
+  for (const [index, report] of reports.entries()) {
+    for (const row of gsmCsvRows(report)) {
+      rows.push(["GSM", ...scenarioLabels, index === 0 ? "A" : "B", ...emptyCoverage, ...row]);
+    }
+  }
+  downloadCsv("mdpc-scenario-comparison.csv",
+    ["Тип строки", "Сценарий A", "Сценарий B", "Сторона GSM", ...coverageHeaders, ...gsmCsvHeaders], rows);
 }
 
 function downloadBudget(rows) {
@@ -278,10 +310,14 @@ function scenarioComparison(operators, scenario) {
   const selects = ["compare-a", "compare-b"].map(id => document.getElementById(id));
   const status = document.getElementById("compare-status");
   const results = document.getElementById("compare-results");
+  const exportButton = document.getElementById("compare-export");
+  let comparison = null;
   let entries = [];
 
   function render() {
     results.hidden = true;
+    comparison = null;
+    exportButton.disabled = true;
     if (entries.length < 2) {
       status.textContent = "Сохраните два сценария для сравнения.";
       return;
@@ -315,18 +351,24 @@ function scenarioComparison(operators, scenario) {
 
     const target = scenario.rsrp_target_dbm;
     const coverageText = value => `${format.format(value)} дБм · запас ${signed.format(value - target)} дБ`;
+    const coverage = operators.flatMap(({ name }, index) => scenario.zones.map(zone => {
+      const zoneCarriers = carriers.map(side => side[index]);
+      const values = zoneCarriers.map(carrier => rsrp(carrier, zone));
+      return { name, zone: zone.id, carriers: zoneCarriers, values, delta: values[1] - values[0] };
+    }));
     comparisonTable("compare-coverage", "RSRP и запас по зонам",
       ["Оператор · зона", ...headings, "Δ RSRP / Δ запаса, дБ"],
-      operators.flatMap(({ name }, index) => scenario.zones.map(zone => {
-        const [a, b] = carriers.map(side => rsrp(side[index], zone));
-        const delta = signed.format(b - a);
-        return [`${name} · ${zone.id}`, coverageText(a), coverageText(b), `${delta} / ${delta}`];
-      })));
+      coverage.map(({ name, zone, values, delta }) => {
+        const difference = signed.format(delta);
+        return [`${name} · ${zone}`, ...values.map(coverageText), `${difference} / ${difference}`];
+      }));
 
-    document.getElementById("compare-gsm").replaceChildren(...pair.map(({ settings }, index) => {
+    const reports = pair.map(({ settings }, index) => {
       const { band, arfcn } = settings.gsm;
       const number = Number(arfcn);
-      const report = checkGsm(carriers[index], band, number, gsmChannel(band, number));
+      return checkGsm(carriers[index], band, number, gsmChannel(band, number));
+    });
+    document.getElementById("compare-gsm").replaceChildren(...reports.map((report, index) => {
       const card = document.createElement("article");
       const heading = document.createElement("h3");
       heading.textContent = `GSM · ${headings[index]}`;
@@ -340,9 +382,14 @@ function scenarioComparison(operators, scenario) {
       }
       return card;
     }));
+    comparison = { headings: pair.map(({ name }) => name), coverage, reports, target };
+    exportButton.disabled = false;
     results.hidden = false;
   }
 
+  exportButton.addEventListener("click", () => {
+    if (comparison) downloadComparison(comparison);
+  });
   for (const select of selects) select.addEventListener("change", render);
   return (updated, renamed = {}) => {
     entries = updated;

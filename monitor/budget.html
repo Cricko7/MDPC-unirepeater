@@ -7,7 +7,7 @@
   <title>Бюджет радиолинии · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="budget.css?v=scenario-comparison-1">
-  <script src="budget.js?v=scenario-comparison-1" defer></script>
+  <script src="budget.js?v=scenario-comparison-2" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -40,7 +40,12 @@
       <p class="budget-hint" id="budget-scenario-status" role="status"></p>
     </section>
     <section class="panel" aria-labelledby="compare-title">
-      <header class="panel-heading"><h2 id="compare-title">Сравнение сценариев</h2></header>
+      <header class="panel-heading">
+        <h2 id="compare-title">Сравнение сценариев</h2>
+        <div class="budget-actions">
+          <button class="history-export" id="compare-export" type="button" disabled>Скачать CSV сравнения</button>
+        </div>
+      </header>
       <div class="budget-actions comparison-controls">
         <label class="budget-control">Сценарий A <select id="compare-a" disabled></select></label>
         <label class="budget-control">Сценарий B <select id="compare-b" disabled></select></label>
