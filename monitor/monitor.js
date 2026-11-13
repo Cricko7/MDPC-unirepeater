@@ -29,6 +29,7 @@ const elements = Object.fromEntries([
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
+  "history-from", "history-to",
 ].map(id => [id, document.getElementById(id)]));
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
@@ -231,17 +232,37 @@ function historyTime(time) {
   return `<time datetime="${new Date(time).toISOString()}">${historyTimeFormat.format(time)}</time>`;
 }
 
+function dateInputKey(input) {
+  // Date inputs expose a calendar date without the browser's time-zone offset.
+  const date = input.valueAsDate;
+  return date ? date.getUTCFullYear() * 10000 + (date.getUTCMonth() + 1) * 100 + date.getUTCDate() : null;
+}
+
 function filteredAlarmHistory() {
   const source = elements["history-zone"].value;
   const level = elements["history-level"].value;
-  return alarmHistory.filter(entry =>
-    (!source || entry.sourceId === source) && (!level || entry.level === level)).reverse();
+  const from = dateInputKey(elements["history-from"]);
+  const to = dateInputKey(elements["history-to"]);
+  const invalidPeriod = from !== null && to !== null && from > to;
+  if (invalidPeriod) return { rows: [], invalidPeriod };
+
+  const rows = alarmHistory.filter(entry => {
+    if ((source && entry.sourceId !== source) || (level && entry.level !== level)) return false;
+    if (from === null && to === null) return true;
+    const date = new Date(entry.occurredAt);
+    const day = date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
+    return (from === null || day >= from) && (to === null || day <= to);
+  }).reverse();
+  return { rows, invalidPeriod };
 }
 
 function renderAlarmHistory() {
-  const rows = filteredAlarmHistory();
+  const { rows, invalidPeriod } = filteredAlarmHistory();
+  for (const id of ["history-from", "history-to"]) {
+    elements[id].setAttribute("aria-invalid", String(invalidPeriod));
+  }
   elements["history-export"].disabled = rows.length === 0;
-  const count = `Записей: ${rows.length} из ${alarmHistory.length}`;
+  const count = invalidPeriod ? "Проверьте даты" : `Записей: ${rows.length} из ${alarmHistory.length}`;
   const counter = elements["history-count"];
   if (counter.textContent !== count) counter.textContent = count;
   elements["history-rows"].innerHTML = rows.length ? rows.map(entry => `
@@ -250,12 +271,13 @@ function renderAlarmHistory() {
       <td><span class="status ${entry.level}"><i aria-hidden="true"></i>${severityLabels[entry.level]}</span></td>
       <td>${historyTime(entry.occurredAt)}</td>
       <td>${entry.recoveredAt === null ? "Активна" : historyTime(entry.recoveredAt)}</td>
-    </tr>`).join("") : `<tr><td colspan="4" class="history-empty">${alarmHistory.length
-      ? "Нет записей по выбранным фильтрам." : "Тревоги пока не зарегистрированы."}</td></tr>`;
+    </tr>`).join("") : `<tr><td colspan="4" class="history-empty">${invalidPeriod
+      ? "Дата «С» должна быть раньше даты «По» или совпадать с ней."
+      : alarmHistory.length ? "Нет записей по выбранным фильтрам." : "Тревоги пока не зарегистрированы."}</td></tr>`;
 }
 
 function exportAlarmHistory() {
-  const entries = filteredAlarmHistory();
+  const { rows: entries } = filteredAlarmHistory();
   if (entries.length === 0) return;
 
   const rows = [
@@ -415,6 +437,8 @@ for (const zone of zones) {
 }
 historyZone.addEventListener("change", renderAlarmHistory);
 elements["history-level"].addEventListener("change", renderAlarmHistory);
+elements["history-from"].addEventListener("input", renderAlarmHistory);
+elements["history-to"].addEventListener("input", renderAlarmHistory);
 elements["history-export"].addEventListener("click", exportAlarmHistory);
 for (const button of metricButtons) {
   button.addEventListener("click", () => {

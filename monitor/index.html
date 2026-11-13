@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#121616">
   <title>Мониторинг связи · МЦОД Датарк</title>
-  <link rel="stylesheet" href="styles.css?v=alarm-csv-1">
-  <script src="monitor.js?v=alarm-csv-1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=alarm-period-1">
+  <script src="monitor.js?v=alarm-period-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -100,6 +100,18 @@
             <option value="warning">Предупреждение</option>
           </select>
         </label>
+        <fieldset class="history-period" aria-describedby="history-period-hint">
+          <legend>Дата возникновения</legend>
+          <div class="history-date-fields">
+            <label for="history-from">С
+              <input id="history-from" type="date">
+            </label>
+            <label for="history-to">По
+              <input id="history-to" type="date">
+            </label>
+          </div>
+          <p class="sr-only" id="history-period-hint">Обе даты включены. Используется местное время браузера.</p>
+        </fieldset>
         <button class="history-export" id="history-export" type="button" disabled>Скачать CSV</button>
       </div>
       <div class="table-scroll history-scroll" role="region" aria-label="Записи журнала тревог" tabindex="0">
