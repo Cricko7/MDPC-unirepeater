@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#121616">
   <title>Бюджет радиолинии · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="budget.css?v=coverage-1">
-  <script src="budget.js?v=budget-json-1" defer></script>
+  <link rel="stylesheet" href="budget.css?v=scenarios-1">
+  <script src="budget.js?v=scenarios-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -20,6 +20,22 @@
     <header class="page-heading">
       <div><h1>Бюджет радиолинии</h1><p>Расчёт RSRP для пяти операторов и пяти зон</p></div>
     </header>
+    <section class="panel" aria-labelledby="scenario-title">
+      <header class="panel-heading">
+        <div><h2 id="scenario-title">Сценарии расчёта</h2><p>Сохраните текущие параметры LTE и GSM под именем. Повторное сохранение с тем же именем обновит сценарий.</p></div>
+      </header>
+      <div class="budget-scenarios">
+        <form id="budget-scenario-form" class="budget-actions">
+          <label class="budget-control">Имя сценария <input type="text" id="budget-scenario-name" maxlength="60" required></label>
+          <button class="history-export" id="budget-scenario-save" type="submit" disabled>Сохранить сценарий</button>
+        </form>
+        <div class="budget-actions">
+          <label class="budget-control">Сохранённый сценарий <select id="budget-scenario-list" disabled></select></label>
+          <button class="history-reset" id="budget-scenario-load" type="button" disabled>Загрузить</button>
+        </div>
+      </div>
+      <p class="budget-hint" id="budget-scenario-status" role="status"></p>
+    </section>
     <section class="panel" aria-labelledby="carriers-title">
       <header class="panel-heading">
         <div><h2 id="carriers-title">Несущие LTE</h2><p>Мощность каждой несущей задаётся на общем входе DAS после узла объединения.</p></div>

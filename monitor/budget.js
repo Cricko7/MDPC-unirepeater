@@ -12,6 +12,7 @@ const signed = new Intl.NumberFormat("ru-RU", { minimumFractionDigits: 2, maximu
 const carrierRows = document.getElementById("carrier-rows");
 const errors = document.getElementById("budget-errors");
 const settingsKey = "mdpc.monitor.budgetSettings.v1";
+const scenariosKey = "mdpc.monitor.budgetScenarios.v1";
 
 function loadBudgetSettings() {
   try {
@@ -232,6 +233,81 @@ function downloadFile(filename, file) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function readScenarios() {
+  const saved = JSON.parse(localStorage.getItem(scenariosKey));
+  return Array.isArray(saved) ? saved.filter(entry =>
+    typeof entry?.name === "string" && entry.name.trim() && entry.name.length <= 60) : [];
+}
+
+function setupNamedScenarios(operators, currentSettings, applySettings, saveAndRender) {
+  const form = document.getElementById("budget-scenario-form");
+  const nameInput = document.getElementById("budget-scenario-name");
+  const list = document.getElementById("budget-scenario-list");
+  const saveButton = document.getElementById("budget-scenario-save");
+  const loadButton = document.getElementById("budget-scenario-load");
+  const status = document.getElementById("budget-scenario-status");
+  let scenarios = [];
+
+  function updateList(selected = "") {
+    list.replaceChildren(new Option(scenarios.length ? "Выберите сценарий" : "Сценариев пока нет", ""),
+      ...scenarios.map(({ name }) => new Option(name, name)));
+    list.value = selected;
+    list.disabled = scenarios.length === 0;
+    loadButton.disabled = !list.value;
+  }
+
+  try {
+    scenarios = readScenarios();
+  } catch {
+    status.textContent = "Сохранённые сценарии не удалось прочитать.";
+  }
+  updateList();
+  saveButton.disabled = false;
+
+  list.addEventListener("change", () => {
+    loadButton.disabled = !list.value;
+  });
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    const name = nameInput.value.trim();
+    if (!name) {
+      status.textContent = "Введите имя сценария.";
+      return;
+    }
+    const settings = currentSettings();
+    try {
+      validateImportedSettings(settings, operators);
+    } catch (error) {
+      status.textContent = `Сценарий не сохранён. ${error.message}`;
+      return;
+    }
+    try {
+      const updated = readScenarios().filter(entry => entry.name !== name);
+      updated.push({ name, settings });
+      localStorage.setItem(scenariosKey, JSON.stringify(updated));
+      scenarios = updated;
+      updateList(name);
+      status.textContent = `Сценарий «${name}» сохранён.`;
+    } catch {
+      status.textContent = "Сценарий не удалось сохранить в хранилище браузера.";
+    }
+  });
+  loadButton.addEventListener("click", () => {
+    const entry = scenarios.find(scenario => scenario.name === list.value);
+    if (!entry) return;
+    try {
+      validateImportedSettings(entry.settings, operators);
+      applySettings(entry.settings);
+      nameInput.value = entry.name;
+      const saved = saveAndRender();
+      status.textContent = saved ? `Сценарий «${entry.name}» загружен.`
+        : `Сценарий «${entry.name}» загружен. Текущие настройки не удалось сохранить.`;
+    } catch (error) {
+      status.textContent = `Сценарий не загружен. ${error.message}`;
+    }
+  });
+}
+
 function setup(scenario) {
   const operators = scenario.operators.map(carrierRow);
   carrierRows.replaceChildren(...operators.map(operator => operator.row));
@@ -435,6 +511,7 @@ function setup(scenario) {
     saveAndRender();
   });
   render();
+  setupNamedScenarios(operators, currentSettings, applySettings, saveAndRender);
   resetButton.disabled = false;
   importButton.disabled = false;
 }
