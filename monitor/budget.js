@@ -13,10 +13,11 @@ const carrierRows = document.getElementById("carrier-rows");
 const errors = document.getElementById("budget-errors");
 const settingsKey = "mdpc.monitor.budgetSettings.v1";
 const scenariosKey = "mdpc.monitor.budgetScenarios.v1";
+const comparisonKey = "mdpc.monitor.budgetComparison.v1";
 
-function loadBudgetSettings() {
+function loadBudgetSettings(key = settingsKey) {
   try {
-    return JSON.parse(localStorage.getItem(settingsKey)) ?? {};
+    return JSON.parse(localStorage.getItem(key)) ?? {};
   } catch {
     return {};
   }
@@ -313,6 +314,19 @@ function scenarioComparison(operators, scenario) {
   const exportButton = document.getElementById("compare-export");
   let comparison = null;
   let entries = [];
+  const saved = loadBudgetSettings(comparisonKey);
+  let selection = [saved.a, saved.b];
+
+  function saveSelection() {
+    const [a, b] = selects.map(select => select.value);
+    if (a === selection[0] && b === selection[1]) return;
+    selection = [a, b];
+    try {
+      localStorage.setItem(comparisonKey, JSON.stringify({ a, b }));
+    } catch {
+      // Comparison still works when browser storage is unavailable.
+    }
+  }
 
   function render() {
     results.hidden = true;
@@ -390,16 +404,21 @@ function scenarioComparison(operators, scenario) {
   exportButton.addEventListener("click", () => {
     if (comparison) downloadComparison(comparison);
   });
-  for (const select of selects) select.addEventListener("change", render);
+  for (const select of selects) select.addEventListener("change", () => {
+    saveSelection();
+    render();
+  });
   return (updated, renamed = {}) => {
     entries = updated;
-    for (const select of selects) {
-      const previous = Object.hasOwn(renamed, select.value) ? renamed[select.value] : select.value;
+    for (const [index, select] of selects.entries()) {
+      const name = selection[index];
+      const previous = typeof name === "string" && Object.hasOwn(renamed, name) ? renamed[name] : name;
       select.replaceChildren(new Option("Выберите сценарий", ""),
         ...entries.map(({ name }) => new Option(name, name)));
       if (entries.some(entry => entry.name === previous)) select.value = previous;
       select.disabled = entries.length < 2;
     }
+    saveSelection();
     render();
   };
 }
