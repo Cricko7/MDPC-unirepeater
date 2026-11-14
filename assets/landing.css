@@ -137,6 +137,8 @@
 .point-list button[aria-pressed="true"] span { color: var(--accent); }
 .resources, .sms-tests { margin-block: clamp(44px, 6vw, 80px); }
 .sms-tests p { margin-block: 9px 12px; }
+.sms-tests .landing-section-heading p { margin-bottom: 0; }
+.sms-tests .landing-button[hidden] { display: none; }
 .sms-tests thead th { border-top: 0; }
 .sms-tests td, .sms-tests tbody th { font-variant-numeric: tabular-nums; }
 .sms-tests tbody th { color: inherit; font-size: inherit; }
