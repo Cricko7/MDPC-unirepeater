@@ -53,7 +53,10 @@ h3 { font-size: .97rem; }
 p { line-height: 1.5; }
 .page-heading p, .panel-heading p, .trend-heading p { margin-top: 4px; }
 .panel-heading p, .trend-heading p { font-size: .83rem; }
-.controls { display: flex; gap: 8px; align-items: center; }
+.controls, .alarm-notification-controls {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+}
+.controls { justify-content: flex-end; }
 .controls label { color: var(--muted); font-size: .82rem; }
 .controls .alarm-notifications {
   display: inline-flex; align-items: center; gap: 8px; min-height: 41px; cursor: pointer;
@@ -63,6 +66,7 @@ p { line-height: 1.5; }
   min-height: 41px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
 }
 .controls select { background: #303648; color: inherit; }
+.controls select:disabled { opacity: .6; cursor: default; }
 .refresh { color: #211923; background: var(--accent); font-weight: 700; }
 .refresh:hover { background: #ffc1af; }
 .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
@@ -204,6 +208,7 @@ footer { padding: 17px 0; font-size: .78rem; }
   .shell { width: calc(100% - 36px); }
   .dashboard, .floor-grid { grid-template-columns: 1fr; }
   .page-heading { align-items: start; flex-direction: column; }
+  .controls { justify-content: flex-start; }
 }
 @media (max-width: 600px) {
   .shell { width: calc(100% - 24px); }
@@ -214,7 +219,6 @@ footer { padding: 17px 0; font-size: .78rem; }
   .brand div > span { font-size: .65rem; }
   .demo { font-size: .65rem; padding: 5px 6px; }
   .page-heading { margin-top: 23px; }
-  .controls { flex-wrap: wrap; }
   .controls label[for="scenario"] { width: 100%; }
   .controls select { min-width: 0; max-width: 100%; }
   .summary { grid-template-columns: 1fr 1fr; gap: 8px; }

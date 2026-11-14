@@ -8,8 +8,9 @@ const {
 } = monitoringTelemetry;
 const historyPageSizeKey = "mdpc.monitor.historyPageSize";
 const alarmNotificationsKey = "mdpc.monitor.alarmNotifications";
+const alarmNotificationLevelKey = "mdpc.monitor.alarmNotificationLevel";
 const elements = Object.fromEntries([
-  "scenario", "refresh", "alarm-notifications", "summary", "zones", "chart", "trend-title",
+  "scenario", "refresh", "alarm-notifications", "alarm-notification-level", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
@@ -17,17 +18,29 @@ const elements = Object.fromEntries([
   "history-pagination", "history-prev", "history-next", "history-page", "history-page-size",
 ].map(id => [id, document.getElementById(id)]));
 const alarmNotifications = elements["alarm-notifications"];
+const alarmNotificationLevel = elements["alarm-notification-level"];
 try {
   alarmNotifications.checked = localStorage.getItem(alarmNotificationsKey) !== "off";
+  alarmNotificationLevel.value = localStorage.getItem(alarmNotificationLevelKey) === "critical" ? "critical" : "all";
 } catch {
-  // The switch still works for the current page without browser storage.
+  // The controls still work for the current page without browser storage.
 }
+alarmNotificationLevel.disabled = !alarmNotifications.checked;
 alarmNotifications.addEventListener("change", () => {
+  alarmNotificationLevel.disabled = !alarmNotifications.checked;
   if (!alarmNotifications.checked) showToast.dismiss("alarm");
   try {
     localStorage.setItem(alarmNotificationsKey, alarmNotifications.checked ? "on" : "off");
   } catch {
     // The switch still works for the current page without browser storage.
+  }
+});
+alarmNotificationLevel.addEventListener("change", () => {
+  showToast.dismiss("alarm");
+  try {
+    localStorage.setItem(alarmNotificationLevelKey, alarmNotificationLevel.value);
+  } catch {
+    // The selected level still applies for the current page.
   }
 });
 const metricButtons = document.querySelectorAll("[data-metric]");
@@ -168,12 +181,18 @@ function updateAlarmHistory(alarms, time) {
 }
 
 function showAlarmEvents(events) {
-  const messages = events.map(({ entry, recovered }) => {
+  const visibleEvents = alarmNotificationLevel.value === "critical"
+    ? events.filter(({ entry }) => entry.level === "critical")
+    : events;
+  if (!visibleEvents.length) return false;
+
+  const messages = visibleEvents.map(({ entry, recovered }) => {
     const action = recovered ? "Восстановление" : "Новая тревога";
     const time = recovered ? entry.recoveredAt : entry.occurredAt;
     return `${action}: ${entry.source} · ${severityLabels[entry.level]}\n${entry.title} · ${historyTimeFormat.format(time)}`;
   });
   showToast(messages.join("\n\n"), "alarm");
+  return true;
 }
 
 function historyTime(time) {
@@ -363,9 +382,7 @@ function render({ recordAlarms = false, scenarioChanged = false, notify = true }
   }
   elements.updated.dateTime = time.toISOString();
   elements.updated.textContent = `Обновлено в ${timeFormat.format(time)}`;
-  const notified = notify && alarmNotifications.checked && events.length > 0;
-  if (notified) showAlarmEvents(events);
-  return notified;
+  return notify && alarmNotifications.checked && showAlarmEvents(events);
 }
 
 function reset(notify = true) {
