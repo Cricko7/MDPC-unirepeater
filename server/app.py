@@ -11,6 +11,7 @@ import tempfile
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Lock
 from urllib.parse import parse_qs, unquote, urlsplit
 
 ROOT = Path(os.environ.get("DATARK_ROOT", "/app"))
@@ -18,6 +19,8 @@ PUBLIC = ROOT / "public"
 ADMIN = ROOT / "admin"
 DATA = Path(os.environ.get("DATARK_DATA", "/data"))
 SETTINGS = DATA / "settings.json"
+TELEMETRY_OVERRIDES = DATA / "telemetry-overrides.json"
+TELEMETRY_WRITE_LOCK = Lock()
 BANDS = {
     "B1": (2110, 2170, (5, 10, 15, 20)),
     "B3": (1805, 1880, (1.4, 3, 5, 10, 15, 20)),
@@ -171,23 +174,26 @@ def save_json(destination, value):
             path.unlink(missing_ok=True)
 
 
-def zone_file(zone):
-    return DATA / f"telemetry-{zone}.json"
-
-
 def read_zone_overrides():
+    try:
+        return json.loads(TELEMETRY_OVERRIDES.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        pass
+    # Import overrides saved by the previous version on the first write.
     overrides = {}
     for zone in ZONE_IDS:
         try:
-            overrides[zone] = json.loads(zone_file(zone).read_text(encoding="utf-8"))
+            overrides[zone] = json.loads((DATA / f"telemetry-{zone}.json").read_text(encoding="utf-8"))
         except FileNotFoundError:
             continue
     return overrides
 
 
 def validate_zone_override(body):
+    if body == {"zone": "all", "override": None}:
+        return "all", None
     if not isinstance(body, dict) or body.get("zone") not in ZONE_IDS or "override" not in body:
-        raise ValueError("Укажите зону A1–A5 и поле override.")
+        raise ValueError("Укажите зону A1–A5 и поле override. Для общего сброса передайте zone: all и override: null.")
     override = body["override"]
     if override is None:
         return body["zone"], None
@@ -403,13 +409,15 @@ class Handler(BaseHTTPRequestHandler):
                 save_json(SETTINGS, settings)
                 result = settings
             else:
-                file = zone_file(zone)
-                if override is None:
-                    file.unlink(missing_ok=True)
-                else:
-                    save_json(file, override)
+                with TELEMETRY_WRITE_LOCK:
+                    overrides = {} if zone == "all" else read_zone_overrides()
+                    if override is None:
+                        overrides.pop(zone, None)
+                    else:
+                        overrides[zone] = override
+                    save_json(TELEMETRY_OVERRIDES, overrides)
                 result = {"zone": zone, "override": override}
-        except OSError:
+        except (OSError, ValueError):
             self.json(500, {"error": "Хранилище настроек недоступно для записи."})
             return
         self.json(200, result)

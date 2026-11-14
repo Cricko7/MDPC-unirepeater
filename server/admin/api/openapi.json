@@ -17,8 +17,8 @@
         "tags": [
           "Администрирование"
         ],
-        "summary": "Задать ручную телеметрию одной зоны",
-        "description": "Ручные значения действуют во всех сценариях и сохраняются после перезапуска. Передайте override: null, чтобы вернуть зону к симуляции.",
+        "summary": "Задать или сбросить ручную телеметрию",
+        "description": "Ручные значения действуют во всех сценариях. Передайте override: null, чтобы вернуть указанную зону к симуляции. Значение zone: all сбрасывает все зоны одним запросом.",
         "security": [
           {
             "BasicAuth": []
@@ -68,6 +68,10 @@
                     "zone": "A3",
                     "override": null
                   }
+                },
+                "restoreAll": {
+                  "summary": "Возврат всех зон к симуляции",
+                  "value": {"zone": "all", "override": null}
                 }
               }
             }
@@ -591,6 +595,11 @@
     "schemas": {
       "ZoneTelemetryUpdate": {
         "type": "object",
+        "if": {"properties": {"zone": {"const": "all"}}, "required": ["zone"]},
+        "then": {
+          "properties": {"zone": {"const": "all"}, "override": {"type": "null"}},
+          "additionalProperties": false
+        },
         "required": [
           "zone",
           "override"
@@ -603,7 +612,8 @@
               "A2",
               "A3",
               "A4",
-              "A5"
+              "A5",
+              "all"
             ]
           },
           "override": {

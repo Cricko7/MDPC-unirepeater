@@ -136,6 +136,15 @@ def check(base):
     reset = {"zone": "A3", "override": None}
     assert json.loads(request(telemetry_path, body=reset, headers=telemetry_auth)) == reset
     assert not json.loads(request("/api/telemetry?scenario=normal"))["zones"][2]["manual"]
+    for zone in ("A1", "A3"):
+        request(telemetry_path, body={**update, "zone": zone}, headers=telemetry_auth)
+    reset_all = {"zone": "all", "override": None}
+    request(telemetry_path, 401, body=reset_all, headers=swagger_auth)
+    request(telemetry_path, 400, body={**reset_all, "override": override}, headers=telemetry_auth)
+    assert sum(zone["manual"] for zone in json.loads(request("/api/telemetry"))["zones"]) == 2
+    for _ in range(2):
+        assert json.loads(request(telemetry_path, body=reset_all, headers=telemetry_auth)) == reset_all
+    assert not any(zone["manual"] for zone in json.loads(request("/api/telemetry"))["zones"])
     settings["calculator"]["operators"][0]["dl_mhz"] = 100
     request("/admin/settings", 400, body=settings, headers=write)
     assert "dl_mhz" not in json.loads(request("/assets/site-defaults.json"))["calculator"]["operators"][0]

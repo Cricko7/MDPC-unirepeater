@@ -12,6 +12,7 @@
   const current = form.querySelector("#telemetry-current");
   const result = form.querySelector("#telemetry-result");
   const reset = form.querySelector("#telemetry-reset");
+  const resetAll = form.querySelector("#telemetry-reset-all");
   const reload = form.querySelector("#telemetry-reload");
 
   zone.replaceChildren(...zones.map(({ id, name }) => new Option(id + " · " + name, id)));
@@ -35,10 +36,13 @@
     const alarmLabels = alarms.map(type => alarmTypes[type].title).join(", ") || "Активных тревог нет";
     current.textContent = `${reading.manual ? "Ручные данные" : "Симуляция"} · ${statusLabels[reading.status]} · ${signal} · ${alarmLabels}`;
     reset.disabled = !reading.manual;
+    resetAll.disabled = !snapshot.zones.some(item => item.manual);
     fields.disabled = false;
   }
 
-  async function update(override) {
+  async function update(override, target = zone.value) {
+    const canResetAll = !resetAll.disabled;
+    resetAll.disabled = true;
     zone.disabled = reload.disabled = fields.disabled = true;
     result.textContent = override === undefined ? "Загрузка телеметрии…" : "Сохранение…";
     try {
@@ -46,13 +50,14 @@
       if (override !== undefined) {
         const response = await fetch("telemetry", {
           method: "PUT", headers: { "Content-Type": "application/json", "X-Datark-Admin": "telemetry" },
-          body: JSON.stringify({ zone: zone.value, override }), signal: AbortSignal.timeout(8000),
+          body: JSON.stringify({ zone: target, override }), signal: AbortSignal.timeout(8000),
         });
         if (!response.ok) {
           const error = await response.json();
           throw new Error(error.error || "Не удалось сохранить телеметрию.");
         }
-        message = override === null ? "Зона возвращена к симуляции." : "Телеметрия сохранена.";
+        message = target === "all" ? "Все зоны возвращены к симуляции."
+          : override === null ? "Зона возвращена к симуляции." : "Телеметрия сохранена.";
         showToast(message);
       }
       result.textContent = message;
@@ -64,6 +69,7 @@
     } catch (error) {
       result.textContent = error.message;
       fields.disabled = false;
+      resetAll.disabled = !canResetAll;
       showToast(error.message, "error");
     } finally {
       zone.disabled = reload.disabled = false;
@@ -73,6 +79,11 @@
   zone.addEventListener("change", () => update());
   reload.addEventListener("click", () => update());
   reset.addEventListener("click", () => update(null));
+  resetAll.addEventListener("click", () => {
+    if (window.confirm("Вернуть все зоны к симуляции? Ручные значения всех зон будут сброшены.")) {
+      update(null, "all");
+    }
+  });
   form.addEventListener("submit", event => {
     event.preventDefault();
     if ((rsrp.value === "") !== (sinr.value === "")) {
