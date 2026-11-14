@@ -14,7 +14,7 @@
 [Открыть сайт Датарк на VPS](https://72.56.14.198/)
 
 <details>
-<summary>Три скриншота сайта на VPS</summary>
+<summary>Скриншоты сайта и Swagger на VPS</summary>
 
 **Главная и интерактивная схема МЦОД**
 
@@ -27,6 +27,12 @@
 **Калькулятор бюджета радиолинии**
 
 ![Параметры пяти LTE-несущих, карта запаса RSRP и проверка тестового GSM-канала](docs/screenshots/vps-link-budget.jpg)
+
+**Swagger UI на VPS**
+
+Все семь запросов вернули `200 OK`.
+
+![Результаты семи запросов к API Датарка в Swagger UI](docs/screenshots/vps-swagger.png)
 
 </details>
 
