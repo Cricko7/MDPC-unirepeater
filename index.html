@@ -11,7 +11,7 @@
   <script src="assets/site-config.js?v=1" defer></script>
   <script src="monitor/telemetry.js?v=4" defer></script>
   <script src="assets/landing.js?v=6" defer></script>
-  <script src="assets/sms-test-results.js?v=2" defer></script>
+  <script src="assets/sms-test-results.js?v=3" defer></script>
 </head>
 <body class="landing">
   <header class="landing-header">
@@ -132,11 +132,12 @@
       <div class="panel table-scroll" id="sms-tests-table" role="region" aria-label="Сравнение режимов LTE" tabindex="0" hidden>
         <table aria-label="Результаты доставки тестовых SMS">
           <thead>
-            <tr><th scope="col">Режим LTE</th><th scope="col">Отправлено</th><th scope="col">Доставлено</th><th scope="col">Мин., мс</th><th scope="col">Средняя, мс</th><th scope="col">Макс., мс</th></tr>
+            <tr><th scope="col">Режим LTE</th><th scope="col">Отправлено</th><th scope="col">Доставлено</th><th scope="col">Доставка, %</th><th scope="col">Мин., мс</th><th scope="col">Средняя, мс</th><th scope="col">Макс., мс</th></tr>
           </thead>
           <tbody id="sms-tests-rows"></tbody>
         </table>
       </div>
+      <p id="sms-tests-latency-change" aria-live="polite" hidden></p>
     </section>
 
     <section class="landing-shell resources" aria-labelledby="resources-title">
