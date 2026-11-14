@@ -1,10 +1,13 @@
-#settings { padding: 20px; }
-#settings fieldset { min-width: 0; border: 1px solid var(--line); padding: 14px; margin: 0 0 16px; }
-#settings legend { padding: 0 7px; font-weight: 650; }
+#settings, #telemetry-panel { padding: 20px; }
+#settings fieldset, #telemetry-fields { min-width: 0; border: 1px solid var(--line); padding: 14px; margin: 0 0 16px; }
+#settings legend, #telemetry-fields legend { padding: 0 7px; font-weight: 650; }
 #settings .table-scroll { margin-top: 10px; }
 #settings td input { width: 110px; }
 .admin-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+#telemetry-panel { margin: 16px 0 24px; }
+#zone-telemetry, #telemetry-current, #telemetry-fields > * + * { margin-top: 10px; }
+#telemetry-fields input[type="number"] { width: 110px; }
 @media (max-width: 640px) {
-  #settings { padding: 12px; }
+  #settings, #telemetry-panel { padding: 12px; }
   .page-heading { align-items: start; flex-direction: column; }
 }

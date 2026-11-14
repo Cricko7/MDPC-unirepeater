@@ -6,10 +6,12 @@
   <title>Настройки демонстрации · Датарк</title>
   <link rel="stylesheet" href="../monitor/styles.css">
   <link rel="stylesheet" href="../monitor/budget.css">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=telemetry-1">
   <link rel="stylesheet" href="../assets/toasts.css">
   <script src="../assets/toasts.js" defer></script>
   <script src="admin.js" defer></script>
+  <script src="../monitor/telemetry.js?v=6" defer></script>
+  <script src="telemetry-admin.js" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -48,6 +50,36 @@
         <p id="result" role="status">Загрузка настроек…</p>
       </div>
     </form>
+    <section class="panel" id="telemetry-panel" aria-labelledby="telemetry-title">
+      <h2 id="telemetry-title">Телеметрия зоны</h2>
+      <p>Ручные тестовые значения действуют для всех посетителей и сценариев.</p>
+      <form id="zone-telemetry">
+        <div class="admin-actions">
+          <div class="budget-control"><label for="telemetry-zone">Зона</label><select id="telemetry-zone"></select></div>
+          <button type="button" class="history-reset" id="telemetry-reload">Обновить показания</button>
+        </div>
+        <p id="telemetry-current" aria-live="polite"></p>
+        <fieldset id="telemetry-fields" disabled>
+          <legend>Ручные значения</legend>
+          <div class="admin-actions">
+            <div class="budget-control"><label for="telemetry-status">Статус</label><select id="telemetry-status"></select></div>
+            <label class="budget-control">RSRP, дБм <input id="telemetry-rsrp" type="number" step="any"></label>
+            <label class="budget-control">SINR, дБ <input id="telemetry-sinr" type="number" step="any"></label>
+          </div>
+          <p>Оставьте оба числовых поля пустыми, если показаний нет.</p>
+          <div class="admin-actions">
+            <span>Активные тревоги</span>
+            <label><input type="checkbox" name="telemetry-alarm" value="low-signal"> Сигнал ниже порога</label>
+            <label><input type="checkbox" name="telemetry-alarm" value="no-telemetry"> Потеря телеметрии</label>
+          </div>
+          <div class="admin-actions">
+            <button type="submit" class="refresh">Сохранить телеметрию</button>
+            <button type="button" class="history-reset" id="telemetry-reset" disabled>Вернуть к симуляции</button>
+          </div>
+        </fieldset>
+        <p id="telemetry-result" role="status">Загрузка телеметрии…</p>
+      </form>
+    </section>
   </main>
 </body>
 </html>
