@@ -2,17 +2,35 @@
 
 const feedback = document.querySelector("#write-feedback");
 const monitorLink = document.querySelector("#monitor-link");
+const loading = document.querySelector("#swagger-loading");
 const writePrompts = {
   "/admin/settings": "Заменить общие стартовые настройки Датарка?",
   "/admin/telemetry": "Изменить общую тестовую телеметрию выбранной зоны?",
 };
 
-SwaggerUIBundle({
+const bundle = document.createElement("script");
+bundle.src = "vendor/swagger-ui-bundle.js";
+const stylesheet = document.createElement("link");
+stylesheet.rel = "stylesheet";
+stylesheet.href = "vendor/swagger-ui.css";
+function reportLoadProblem() {
+  loading.firstChild.textContent = "Swagger загружается слишком долго или недоступен. ";
+}
+const loadTimeout = setTimeout(reportLoadProblem, 12000);
+bundle.addEventListener("error", () => {
+  clearTimeout(loadTimeout);
+  reportLoadProblem();
+});
+bundle.addEventListener("load", () => SwaggerUIBundle({
   url: "openapi.json",
   dom_id: "#swagger-ui",
   validatorUrl: null,
   persistAuthorization: false,
   showMutatedRequest: false,
+  onComplete() {
+    clearTimeout(loadTimeout);
+    loading.hidden = true;
+  },
   requestInterceptor(request) {
     const url = new URL(request.url, window.location.href);
     if (url.origin !== window.location.origin) {
@@ -53,4 +71,5 @@ SwaggerUIBundle({
     }
     return response;
   },
-});
+}));
+document.head.append(stylesheet, bundle);

@@ -4,10 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Датарк · API</title>
-  <link rel="icon" href="/assets/datark-logo.png">
-  <link rel="stylesheet" href="vendor/swagger-ui.css">
-  <script src="vendor/swagger-ui-bundle.js" defer></script>
-  <script src="swagger-init.js?v=monitor-sync-1" defer></script>
+  <script src="swagger-init.js?v=load-status-1" defer></script>
 </head>
 <body>
   <nav class="swagger-ui">
@@ -18,6 +15,7 @@
       <p><a id="monitor-link" href="/monitor/">Открыть мониторинг</a> · <a href="/monitor/?scenario=server">Мониторинг по настройкам сайта</a></p>
     </div>
   </nav>
+  <p id="swagger-loading" role="status">Загрузка Swagger… <a href="../#telemetry-panel">Открыть форму телеметрии</a></p>
   <main id="swagger-ui"></main>
 </body>
 </html>

@@ -2,6 +2,7 @@
 
 import argparse
 import base64
+import gzip
 import hashlib
 import json
 import os
@@ -190,6 +191,14 @@ def main():
                                 headers={"Authorization": "Basic " + auth})
                 with urlopen(asset, timeout=4) as response:
                     assert b"SwaggerUIBundle" in response.read()
+                for filename in ("swagger-ui-bundle.js", "swagger-ui.css"):
+                    compressed = Request("http://" + address + "/admin/api/vendor/" + filename,
+                                         headers={"Authorization": "Basic " + auth, "Accept-Encoding": "gzip"})
+                    with urlopen(compressed, timeout=4) as response:
+                        assert response.headers["Content-Encoding"] == "gzip"
+                        assert "Accept-Encoding" in response.headers["Vary"]
+                        payload = response.read()
+                        assert len(gzip.decompress(payload)) > len(payload)
                 subprocess.run([*project, "up", "-d", "--wait", "--force-recreate", "web"], env=env, check=True)
                 address = subprocess.check_output([*project, "port", "web", "8080"], env=env, text=True).strip()
                 with urlopen("http://" + address + "/assets/site-defaults.json", timeout=4) as response:

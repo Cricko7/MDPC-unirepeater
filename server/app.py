@@ -362,6 +362,14 @@ class Handler(BaseHTTPRequestHandler):
         if file.suffix in (".html", ".js", ".css", ".md", ".csv"):
             media_type += "; charset=utf-8"
         try:
+            headers = None
+            if root == ADMIN / "api" and name in ("vendor/swagger-ui.css", "vendor/swagger-ui-bundle.js"):
+                headers = {"Vary": "Accept-Encoding"}
+                gzip_file = file.with_name(file.name + ".gz")
+                encodings = [item.strip().lower() for item in self.headers.get("Accept-Encoding", "").split(",")]
+                if "gzip" in encodings and gzip_file.is_file():
+                    file = gzip_file
+                    headers["Content-Encoding"] = "gzip"
             content = file.read_bytes()
         except OSError:
             self.json(404, {"error": "Страница не найдена."})
@@ -374,7 +382,7 @@ class Handler(BaseHTTPRequestHandler):
                 '<a href="#sms-tests">Испытания SMS</a>'.encode(),
                 1,
             )
-        self.send_payload(200, content, media_type)
+        self.send_payload(200, content, media_type, headers)
 
     def do_PUT(self):
         resource = urlsplit(self.path).path

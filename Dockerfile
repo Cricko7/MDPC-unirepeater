@@ -4,6 +4,7 @@ ADD --checksum=sha256:8e7286de0230e431fc8a5a75490d28117af3d0c306413b6f9e17f7bb55
 RUN mkdir /swagger && tar -xzf /tmp/swagger.tgz --strip-components=1 -C /swagger \
     package/swagger-ui.css package/swagger-ui-bundle.js package/swagger-ui-bundle.js.LICENSE.txt \
     package/LICENSE package/NOTICE
+RUN gzip -kn9 /swagger/swagger-ui.css /swagger/swagger-ui-bundle.js
 
 FROM python:3.13-slim
 ARG REVISION=local
