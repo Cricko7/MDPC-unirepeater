@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход · Датарк</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #202430; color: #fff; }
+    main { max-width: 25rem; margin: 9vh auto; padding: 1.5rem; }
+    form, label { display: grid; gap: .65rem; }
+    form { gap: 1.1rem; }
+    input, button { font: inherit; padding: .65rem; border: 1px solid #68728a; border-radius: .4rem; }
+    button { color: #211923; background: #ff9b86; font-weight: 700; cursor: pointer; }
+    a { color: #ff9b86; }
+    [role="alert"]:empty { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Вход в Датарк</h1>
+    <p>Введите логин и пароль админ-панели.</p>
+    <p role="alert">{{message}}</p>
+    <form method="post" action="/admin/login">
+      <input type="hidden" name="next" value="{{destination}}">
+      <label>Логин <input name="username" autocomplete="username" required></label>
+      <label>Пароль <input type="password" name="password" autocomplete="current-password" required></label>
+      <button type="submit">Войти</button>
+    </form>
+    <p><a href="/">На главную</a></p>
+  </main>
+</body>
+</html>

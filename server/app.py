@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import hmac
 import json
 import math
 import mimetypes
@@ -10,6 +11,7 @@ import secrets
 import tempfile
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.cookies import CookieError, SimpleCookie
 from pathlib import Path
 from threading import Lock
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -35,6 +37,10 @@ REVISION = os.environ.get("DATARK_REVISION", "local")
 SWAGGER_TOKEN_SHA256 = os.environ.get("DATARK_SWAGGER_TOKEN_SHA256", "")
 EDITOR_ORIGINS = {"https://editor.swagger.io", "https://jdegre.github.io"}
 EDITOR_PATHS = {"/healthz", "/assets/site-defaults.json", "/api/sms-test-results", "/api/telemetry"}
+SESSION_COOKIE = "datark_admin"
+SESSION_LIFETIME = 3600
+SESSION_KEY = secrets.token_bytes(32)
+LOGIN_DESTINATIONS = {"swagger": "/admin/api/", "admin": "/admin/"}
 
 TELEMETRY_INTERVAL_MS = 5000
 ZONE_BASELINES = ((-89, 15), (-91, 12), (-85, 18), (-93, 10), (-82, 20))
@@ -239,7 +245,7 @@ class Handler(BaseHTTPRequestHandler):
             if origin in EDITOR_ORIGINS:
                 self.send_header("Access-Control-Allow-Origin", origin)
         self.send_header("X-Content-Type-Options", "nosniff")
-        policy = "default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'"
+        policy = "default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
         if urlsplit(self.path).path == "/admin/api/":
             policy += "; img-src 'self' data:"
         self.send_header("Content-Security-Policy", policy)
@@ -257,6 +263,8 @@ class Handler(BaseHTTPRequestHandler):
         if not password:
             self.json(503, {"error": "Настройте пароль администратора на сервере."})
             return False
+        if self.valid_session(password):
+            return True
         scheme, _, token = self.headers.get("Authorization", "").partition(" ")
         try:
             user, separator, supplied = base64.b64decode(token, validate=True).decode().partition(":")
@@ -267,8 +275,81 @@ class Handler(BaseHTTPRequestHandler):
             & secrets.compare_digest(digest(supplied), digest(password))
         ):
             return True
+        path = urlsplit(self.path).path
+        if self.command in ("GET", "HEAD") and path in ("/admin", "/admin/", "/admin/api", "/admin/api/") and (
+            self.headers.get("Sec-Fetch-Mode") == "navigate" or "text/html" in self.headers.get("Accept", "")
+        ):
+            destination = "swagger" if path.startswith("/admin/api") else "admin"
+            self.send_payload(303, b"", "text/plain", {"Location": f"/admin/login?next={destination}"})
+            return False
         self.json(401, {"error": "Требуется вход."}, {"WWW-Authenticate": 'Basic realm="Datark admin", charset="UTF-8"'})
         return False
+
+    @staticmethod
+    def session_signature(password, session):
+        key = hmac.digest(SESSION_KEY, digest(password), "sha256")
+        return hmac.new(key, session.encode(), "sha256").hexdigest()
+
+    def valid_session(self, password):
+        try:
+            cookie = SimpleCookie(self.headers.get("Cookie", "")).get(SESSION_COOKIE)
+            if cookie is None:
+                return False
+            expires, nonce, signature = cookie.value.split(".")
+            return int(expires) > time.time() and signature.isascii() and secrets.compare_digest(
+                signature, self.session_signature(password, f"{expires}.{nonce}")
+            )
+        except (ValueError, CookieError):
+            return False
+
+    def cookie_header(self, value, age):
+        return f"{SESSION_COOKIE}={value}; Path=/admin; Max-Age={age}; Secure; HttpOnly; SameSite=Strict"
+
+    def login_page(self, destination, status=200, message=""):
+        template = (ADMIN / "login.html").read_text(encoding="utf-8")
+        content = template.replace("{{destination}}", destination).replace("{{message}}", message)
+        self.send_payload(status, content.encode(), "text/html; charset=utf-8")
+
+    def do_POST(self):
+        path = urlsplit(self.path).path
+        if path not in ("/admin/login", "/admin/logout"):
+            self.json(404, {"error": "Страница не найдена."})
+            return
+        if self.headers.get("Sec-Fetch-Site") not in (None, "same-origin", "none"):
+            self.json(403, {"error": "Запрос отклонён."})
+            return
+        if path == "/admin/logout":
+            self.send_payload(303, b"", "text/plain", {
+                "Location": "/admin/login?next=admin", "Set-Cookie": self.cookie_header("", 0),
+            })
+            return
+        try:
+            size = int(self.headers.get("Content-Length", "0"))
+            if not 0 < size <= 4096 or self.headers.get_content_type() != "application/x-www-form-urlencoded":
+                raise ValueError()
+            fields = parse_qs(self.rfile.read(size).decode("utf-8"), max_num_fields=3)
+        except ValueError:
+            self.json(400, {"error": "Некорректная форма входа."})
+            return
+        destination = fields.get("next", ["swagger"])[0]
+        if destination not in LOGIN_DESTINATIONS:
+            destination = "swagger"
+        password = admin_password()
+        if not password:
+            self.login_page(destination, 503, "Пароль администратора не настроен.")
+            return
+        user = fields.get("username", [""])[0]
+        supplied = fields.get("password", [""])[0]
+        if not (secrets.compare_digest(digest(user), digest(ADMIN_USER))
+                & secrets.compare_digest(digest(supplied), digest(password))):
+            self.login_page(destination, 401, "Неверный логин или пароль.")
+            return
+        session = f"{int(time.time()) + SESSION_LIFETIME}.{secrets.token_urlsafe(24)}"
+        signed = f"{session}.{self.session_signature(password, session)}"
+        self.send_payload(303, b"", "text/plain", {
+            "Location": LOGIN_DESTINATIONS[destination],
+            "Set-Cookie": self.cookie_header(signed, SESSION_LIFETIME),
+        })
 
     def authorize_swagger(self):
         scheme, _, token = self.headers.get("Authorization", "").partition(" ")
@@ -281,6 +362,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = unquote(urlsplit(self.path).path)
+        if path == "/admin/login":
+            destination = parse_qs(urlsplit(self.path).query).get("next", ["swagger"])[0]
+            self.login_page(destination if destination in LOGIN_DESTINATIONS else "swagger")
+            return
+        if path == "/admin/api":
+            self.send_payload(308, b"", "text/plain", {"Location": "/admin/api/"})
+            return
         if path == "/healthz":
             try:
                 validate(load_settings())

@@ -14,11 +14,48 @@ import tempfile
 import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
 SWAGGER_TOKEN = "smoke-only-swagger-token"
 SWAGGER_TOKEN_SHA256 = hashlib.sha256(SWAGGER_TOKEN.encode()).hexdigest()
+
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def check_web_login(base):
+    opener = build_opener(NoRedirect)
+
+    def call(path, status, data=None, headers=None):
+        req = Request(base + path, data=data, headers=headers or {})
+        try:
+            response = opener.open(req, timeout=4)
+        except HTTPError as error:
+            response = error
+        with response:
+            assert response.status == status, (path, response.status, status)
+            return response.headers, response.read()
+
+    headers, _ = call("/admin/api/", 303, headers={"Accept": "text/html"})
+    login = headers["Location"]
+    assert login == "/admin/login?next=swagger"
+    assert b'name="password"' in call(login, 200)[1]
+    fields = {"username": "admin", "password": "invalid", "next": "swagger"}
+    assert call("/admin/login", 401, urlencode(fields).encode())[0].get("Set-Cookie") is None
+    fields["password"] = "smoke-only-password"
+    call("/admin/login", 403, urlencode(fields).encode(), {"Sec-Fetch-Site": "cross-site"})
+    headers, _ = call("/admin/login", 303, urlencode(fields).encode())
+    assert headers["Location"] == "/admin/api/"
+    cookie = headers["Set-Cookie"]
+    assert all(attribute in cookie for attribute in ("Secure", "HttpOnly", "SameSite=Strict"))
+    session = {"Cookie": cookie.split(";", 1)[0]}
+    assert b'id="swagger-ui"' in call("/admin/api/", 200, headers=session)[1]
+    assert b'"/api/telemetry"' in call("/admin/api/openapi.json", 200, headers=session)[1]
+    assert call("/admin/logout", 303, b"", session)[0]["Set-Cookie"].startswith("datark_admin=;")
 
 
 def check(base):
@@ -60,6 +97,7 @@ def check(base):
     request("/admin/admin.js", 401)
     request("/admin/api/", 401)
     request("/admin/api/openapi.json", 401)
+    check_web_login(base)
     assert b'id="swagger-ui"' in request("/admin/api/", headers=auth)
     spec = json.loads(request("/admin/api/openapi.json", headers=auth))
     assert spec["paths"]["/admin/settings"]["put"]["security"] == [{"BasicAuth": []}]

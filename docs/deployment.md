@@ -41,7 +41,7 @@
 
 ## Проверка API через Swagger UI
 
-Откройте `/admin/api/` и войдите с учётными данными админ-панели. Разверните запрос и нажмите **Try it out → Execute**. Начните с `GET /healthz` для проверки статуса и ревизии, затем проверьте `GET /assets/site-defaults.json` или `GET /admin/settings`.
+Откройте `/admin/api/` по HTTPS. Если браузер ещё не вошёл, сервер покажет форму `/admin/login?next=swagger`. Используйте учётные данные админ-панели. Разверните запрос и нажмите **Try it out → Execute**. Начните с `GET /healthz` для проверки статуса и ревизии, затем проверьте `GET /assets/site-defaults.json` или `GET /admin/settings`.
 
 Для записи скопируйте текущий JSON из `GET /admin/settings`, измените нужные поля и отправьте его через `PUT /admin/settings`. PUT заменяет общие настройки и запрашивает подтверждение в браузере. OpenAPI JSON доступен по `/admin/api/openapi.json`.
 
