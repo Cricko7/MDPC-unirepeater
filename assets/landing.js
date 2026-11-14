@@ -28,10 +28,16 @@ const points = {
 
 const {
   statusLabels, severityLabels, alarmDetails, alarmTypes, formatValue, metrics,
-  snapshotKey, scenarioKey, chooseScenario, readSnapshot,
+  snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot,
   selectedZoneKey, readSelectedZone, saveSelectedZone,
 } = monitoringTelemetry;
+const linkParams = new URLSearchParams(location.search);
+const linkedPoint = linkParams.get("zone");
+const linkedScenario = linkParams.get("scenario");
 const scenarioSelect = document.querySelector("#landing-scenario");
+const copyLink = document.querySelector("#copy-layout-link");
+const shareStatus = document.querySelector("#layout-share-status");
+const shareUrl = document.querySelector("#layout-share-url");
 const pointButtons = document.querySelectorAll("[data-point]");
 const pointType = document.querySelector("#point-type");
 const pointTitle = document.querySelector("#point-title");
@@ -58,6 +64,37 @@ let zoomIndex = 0;
 let selectedPoint = readSelectedZone();
 let sharedZone = selectedPoint;
 let snapshot;
+
+function layoutUrl() {
+  const url = new URL(location.pathname, location.origin);
+  url.searchParams.set("zone", selectedPoint);
+  url.searchParams.set("scenario", snapshot.scenario);
+  url.hash = "layout";
+  return url;
+}
+
+function updateShareLink() {
+  if (linkParams.has("zone") || linkParams.has("scenario")) {
+    history.replaceState(history.state, "", layoutUrl());
+  }
+  shareStatus.textContent = "";
+  shareUrl.hidden = true;
+}
+
+copyLink.addEventListener("click", async () => {
+  const url = layoutUrl().href;
+  try {
+    await navigator.clipboard.writeText(url);
+    shareStatus.textContent = "Ссылка скопирована.";
+    shareUrl.hidden = true;
+  } catch {
+    shareStatus.textContent = "Скопируйте выделенную ссылку вручную.";
+    shareUrl.value = url;
+    shareUrl.hidden = false;
+    shareUrl.focus();
+    shareUrl.select();
+  }
+});
 
 function showPointTelemetry() {
   const repeater = selectedPoint === "R1";
@@ -136,6 +173,7 @@ function syncSelectedZone() {
   if (sharedZone === id) return;
   sharedZone = id;
   showPoint(id);
+  updateShareLink();
 }
 
 for (const button of pointButtons) {
@@ -146,6 +184,7 @@ for (const button of pointButtons) {
       saveSelectedZone(id);
     }
     showPoint(id);
+    updateShareLink();
   });
 }
 
@@ -162,15 +201,36 @@ function changeZoom(step) {
 zoomOut.addEventListener("click", () => changeZoom(-1));
 zoomIn.addEventListener("click", () => changeZoom(1));
 
-scenarioSelect.addEventListener("change", () => syncMonitoring(chooseScenario(scenarioSelect.value)));
+function refreshMonitoring() {
+  const previousScenario = snapshot.scenario;
+  syncMonitoring();
+  if (snapshot.scenario !== previousScenario) updateShareLink();
+}
+
+scenarioSelect.addEventListener("change", () => {
+  syncMonitoring(chooseScenario(scenarioSelect.value));
+  updateShareLink();
+});
 window.addEventListener("storage", event => {
-  if (event.key === scenarioKey || event.key === snapshotKey || event.key === null) syncMonitoring();
+  if (event.key === scenarioKey || event.key === snapshotKey || event.key === null) refreshMonitoring();
   if (event.key === selectedZoneKey || event.key === null) syncSelectedZone();
 });
 window.addEventListener("pageshow", event => {
   if (!event.persisted) return;
-  syncMonitoring();
+  refreshMonitoring();
   syncSelectedZone();
 });
-syncMonitoring();
+
+const validLinkedScenario = Array.from(scenarioSelect.options).some(option => option.value === linkedScenario);
+const sharedScenario = validLinkedScenario && linkedScenario !== readScenario().id
+  ? chooseScenario(linkedScenario)
+  : undefined;
+if (Object.hasOwn(points, linkedPoint)) {
+  selectedPoint = linkedPoint;
+  if (selectedPoint !== "R1") {
+    sharedZone = selectedPoint;
+    saveSelectedZone(sharedZone);
+  }
+}
+syncMonitoring(sharedScenario);
 showPoint(selectedPoint);

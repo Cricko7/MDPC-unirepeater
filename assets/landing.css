@@ -60,6 +60,11 @@
 .landing h2 { font-size: clamp(1.55rem, 3.5vw, 2.6rem); letter-spacing: -.045em; line-height: 1.04; text-wrap: balance; }
 .landing-section-heading p { margin-top: 9px; }
 .text-link { flex: none; font-size: .88rem; }
+.layout-actions { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
+.layout-actions button { background: transparent; min-height: 36px; }
+.layout-share p { font-size: .85rem; }
+.layout-share p:not(:empty), .layout-share input:not([hidden]) { margin-bottom: 10px; }
+.layout-share input { width: 100%; padding: 8px; border: 1px solid var(--landing-line); border-radius: 4px; background: var(--panel); color: inherit; }
 .layout-explorer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 258px;

@@ -7,9 +7,9 @@
   <meta name="description" content="Проект мобильной связи для МЦОД Датарк: схема размещения оборудования, мониторинг и расчёт LTE-покрытия.">
   <title>Датарк — мобильная связь в МЦОД</title>
   <link rel="stylesheet" href="monitor/styles.css?v=datark-design-1">
-  <link rel="stylesheet" href="assets/landing.css?v=3">
+  <link rel="stylesheet" href="assets/landing.css?v=4">
   <script src="monitor/telemetry.js?v=3" defer></script>
-  <script src="assets/landing.js?v=4" defer></script>
+  <script src="assets/landing.js?v=5" defer></script>
 </head>
 <body class="landing">
   <header class="landing-header">
@@ -46,7 +46,14 @@
           <h2 id="layout-title">Схема размещения оборудования</h2>
           <p>Выберите антенну или репитер на плане.</p>
         </div>
-        <a class="text-link" href="docs/mdpc-radio-layout.png" target="_blank" rel="noopener">Полный чертёж ↗</a>
+        <div class="layout-actions">
+          <a class="text-link" href="docs/mdpc-radio-layout.png" target="_blank" rel="noopener">Полный чертёж ↗</a>
+          <button class="landing-button" type="button" id="copy-layout-link">Скопировать ссылку</button>
+        </div>
+      </div>
+      <div class="layout-share">
+        <p id="layout-share-status" role="status"></p>
+        <input id="layout-share-url" type="url" readonly aria-label="Ссылка на выбранную точку и сценарий" hidden>
       </div>
       <div class="layout-explorer">
         <div class="drawing">
