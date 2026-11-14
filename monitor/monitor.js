@@ -10,8 +10,10 @@ const historyPageSizeKey = "mdpc.monitor.historyPageSize";
 const alarmNotificationsKey = "mdpc.monitor.alarmNotifications";
 const alarmNotificationLevelKey = "mdpc.monitor.alarmNotificationLevel";
 const alarmNotificationZoneKey = "mdpc.monitor.alarmNotificationZone";
+const alarmNotificationEventKey = "mdpc.monitor.alarmNotificationEvent";
 const elements = Object.fromEntries([
   "scenario", "refresh", "alarm-notifications", "alarm-notification-level", "alarm-notification-zone",
+  "alarm-notification-event",
   "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
@@ -22,12 +24,14 @@ const elements = Object.fromEntries([
 const alarmNotifications = elements["alarm-notifications"];
 const alarmNotificationLevel = elements["alarm-notification-level"];
 const alarmNotificationZone = elements["alarm-notification-zone"];
+const alarmNotificationEvent = elements["alarm-notification-event"];
 for (const { id, name } of zones) {
   alarmNotificationZone.add(new Option(`${id} · ${name}`, id));
 }
 const alarmNotificationFilters = [
   [alarmNotificationLevel, alarmNotificationLevelKey],
   [alarmNotificationZone, alarmNotificationZoneKey],
+  [alarmNotificationEvent, alarmNotificationEventKey],
 ];
 try {
   alarmNotifications.checked = localStorage.getItem(alarmNotificationsKey) !== "off";
@@ -200,9 +204,11 @@ function updateAlarmHistory(alarms, time) {
 function showAlarmEvents(events) {
   const level = alarmNotificationLevel.value;
   const zone = alarmNotificationZone.value;
-  const visibleEvents = events.filter(({ entry }) =>
+  const eventType = alarmNotificationEvent.value;
+  const visibleEvents = events.filter(({ entry, recovered }) =>
     (level === "all" || entry.level === level) &&
-    (zone === "all" || entry.sourceId === zone));
+    (zone === "all" || entry.sourceId === zone) &&
+    (eventType === "all" || eventType === (recovered ? "recovered" : "new")));
   if (!visibleEvents.length) return false;
 
   const messages = visibleEvents.map(({ entry, recovered }) => {
