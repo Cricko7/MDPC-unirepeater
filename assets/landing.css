@@ -79,6 +79,9 @@
   font-weight: 620;
   font-size: .86rem;
 }
+.drawing-toolbar { flex-wrap: wrap; gap: 6px 12px; }
+.drawing-scenario { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 9px; }
+.drawing-scenario select { max-width: 100%; min-height: 35px; padding: 4px 6px; background: #303648; color: inherit; border: 1px solid var(--landing-line); border-radius: 4px; }
 .zoom-controls { display: flex; align-items: center; gap: 8px; }
 .zoom-controls output { min-width: 38px; font-variant-numeric: tabular-nums; text-align: center; }
 .zoom-controls button {

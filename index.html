@@ -7,9 +7,9 @@
   <meta name="description" content="Проект мобильной связи для МЦОД Датарк: схема размещения оборудования, мониторинг и расчёт LTE-покрытия.">
   <title>Датарк — мобильная связь в МЦОД</title>
   <link rel="stylesheet" href="monitor/styles.css?v=datark-design-1">
-  <link rel="stylesheet" href="assets/landing.css?v=2">
-  <script src="monitor/telemetry.js?v=1" defer></script>
-  <script src="assets/landing.js?v=2" defer></script>
+  <link rel="stylesheet" href="assets/landing.css?v=3">
+  <script src="monitor/telemetry.js?v=2" defer></script>
+  <script src="assets/landing.js?v=3" defer></script>
 </head>
 <body class="landing">
   <header class="landing-header">
@@ -51,7 +51,13 @@
       <div class="layout-explorer">
         <div class="drawing">
           <div class="drawing-toolbar">
-            <span>План МЦОД</span>
+            <label class="drawing-scenario" for="landing-scenario">Тестовый сценарий
+              <select id="landing-scenario">
+                <option value="mixed">Деградация и потеря связи</option>
+                <option value="normal">Штатная работа</option>
+                <option value="offline">Репитер отключён</option>
+              </select>
+            </label>
             <div class="zoom-controls" role="group" aria-label="Масштаб плана">
               <button type="button" id="zoom-out" aria-label="Уменьшить масштаб" disabled>−</button>
               <output id="zoom-value" aria-live="polite">100%</output>

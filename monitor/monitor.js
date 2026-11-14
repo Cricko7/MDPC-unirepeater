@@ -2,9 +2,9 @@
 
 const {
   interval, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
-  alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot, snapshotKey,
+  alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot,
+  historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario,
 } = monitoringTelemetry;
-const historyStorageKey = "mdpc.monitor.alarmHistory.v1";
 const historyPageSizeKey = "mdpc.monitor.historyPageSize";
 const elements = Object.fromEntries([
   "scenario", "refresh", "summary", "zones", "chart", "trend-title",
@@ -24,13 +24,12 @@ const historyTimeFormat = new Intl.DateTimeFormat("ru-RU", {
   day: "2-digit", month: "2-digit", year: "numeric",
   hour: "2-digit", minute: "2-digit", second: "2-digit",
 });
-const savedHistory = loadAlarmHistory();
 let historyPage = 1;
-const alarmHistory = savedHistory.entries;
+const alarmHistory = loadAlarmHistory();
 const openAlarms = new Map(alarmHistory.filter(entry => entry.recoveredAt === null)
   .map(entry => [alarmKey(entry), entry]));
 
-let scenario = savedHistory.scenario;
+let scenario = readScenario().id;
 elements.scenario.value = scenario;
 let selectedZone = "A2";
 let selectedMetric = "rsrp";
@@ -48,10 +47,9 @@ function validTime(value) {
 }
 
 function loadAlarmHistory() {
-  const fallback = { entries: [], scenario: elements.scenario.value };
   try {
     const saved = JSON.parse(localStorage.getItem(historyStorageKey));
-    if (!saved || !Array.isArray(saved.entries)) return fallback;
+    if (!saved || !Array.isArray(saved.entries)) return [];
     const entries = [];
     const activeKeys = new Set();
     for (const entry of saved.entries) {
@@ -66,10 +64,9 @@ function loadAlarmHistory() {
       }
       entries.push({ ...alarmDetails(sourceId, type), occurredAt, recoveredAt });
     }
-    const hasScenario = Array.from(elements.scenario.options).some(option => option.value === saved.scenario);
-    return { entries, scenario: hasScenario ? saved.scenario : fallback.scenario };
+    return entries;
   } catch {
-    return fallback;
+    return [];
   }
 }
 
@@ -359,10 +356,23 @@ function restartTimer() {
   timer = setInterval(nextSample, interval);
 }
 
-elements.scenario.addEventListener("change", () => {
-  scenario = elements.scenario.value;
+function applyScenario(id) {
+  if (scenario === id) return;
+  scenario = id;
+  elements.scenario.value = id;
   reset();
   elements.announcement.textContent = "Тестовый сценарий изменён.";
+}
+
+elements.scenario.addEventListener("change", () => {
+  const { id } = chooseScenario(elements.scenario.value);
+  applyScenario(id);
+});
+window.addEventListener("storage", event => {
+  if (event.key === scenarioKey) applyScenario(readScenario().id);
+});
+window.addEventListener("pageshow", event => {
+  if (event.persisted) applyScenario(readScenario().id);
 });
 elements.refresh.addEventListener("click", () => {
   nextSample();

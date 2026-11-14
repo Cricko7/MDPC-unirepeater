@@ -26,7 +26,11 @@ const points = {
   },
 };
 
-const { statusLabels, severityLabels, alarmDetails, alarmTypes, formatValue, metrics, snapshotKey, readSnapshot } = monitoringTelemetry;
+const {
+  statusLabels, severityLabels, alarmDetails, alarmTypes, formatValue, metrics,
+  snapshotKey, scenarioKey, chooseScenario, readSnapshot,
+} = monitoringTelemetry;
+const scenarioSelect = document.querySelector("#landing-scenario");
 const pointButtons = document.querySelectorAll("[data-point]");
 const pointType = document.querySelector("#point-type");
 const pointTitle = document.querySelector("#point-title");
@@ -83,8 +87,9 @@ function showPointTelemetry() {
   noAlarms.hidden = alarms.length > 0;
 }
 
-function syncMonitoring() {
-  snapshot = readSnapshot();
+function syncMonitoring(choice) {
+  snapshot = readSnapshot(choice);
+  scenarioSelect.value = snapshot.scenario;
   for (const marker of map.querySelectorAll("[data-point]")) {
     const id = marker.dataset.point;
     const repeater = id === "R1";
@@ -140,8 +145,11 @@ function changeZoom(step) {
 zoomOut.addEventListener("click", () => changeZoom(-1));
 zoomIn.addEventListener("click", () => changeZoom(1));
 
+scenarioSelect.addEventListener("change", () => syncMonitoring(chooseScenario(scenarioSelect.value)));
 window.addEventListener("storage", event => {
-  if (event.key === snapshotKey || event.key === null) syncMonitoring();
+  if (event.key === scenarioKey || event.key === snapshotKey || event.key === null) syncMonitoring();
 });
-window.addEventListener("pageshow", syncMonitoring);
+window.addEventListener("pageshow", event => {
+  if (event.persisted) syncMonitoring();
+});
 syncMonitoring();

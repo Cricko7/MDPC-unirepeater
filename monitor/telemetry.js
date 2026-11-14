@@ -95,6 +95,7 @@ const monitoringTelemetry = (() => {
     const latest = samples.at(-1);
     return {
       time: latest.time,
+      scenario,
       online: scenario !== "offline",
       zones: states.map(({ zone, status }) => ({ id: zone.id, status, reading: latest.zones[zone.id] })),
       alarms: alarms.map(({ sourceId, type }) => ({ sourceId, type })),
@@ -103,15 +104,43 @@ const monitoringTelemetry = (() => {
 
   const snapshotKey = "mdpc.monitor.snapshot.v1";
 
-  function readSnapshot() {
-    let scenario = "mixed";
+  const scenarioKey = "mdpc.monitor.scenario.v1";
+  const historyStorageKey = "mdpc.monitor.alarmHistory.v1";
+
+  function validScenario(value) {
+    return ["mixed", "normal", "offline"].includes(value);
+  }
+
+  function readScenario() {
+    try {
+      const choice = JSON.parse(localStorage.getItem(scenarioKey));
+      if (validScenario(choice?.id) && Number.isFinite(choice.changedAt)) return choice;
+      const previous = JSON.parse(localStorage.getItem(historyStorageKey))?.scenario;
+      if (validScenario(previous)) return { id: previous, changedAt: 0 };
+    } catch {
+      // Use the demo default when storage is unavailable.
+    }
+    return { id: "mixed", changedAt: 0 };
+  }
+
+  function chooseScenario(id) {
+    const choice = { id, changedAt: Date.now() };
+    try {
+      localStorage.setItem(scenarioKey, JSON.stringify(choice));
+    } catch {
+      // The selection still works on the current page.
+    }
+    return choice;
+  }
+
+  function readSnapshot({ id: scenario, changedAt } = readScenario()) {
     try {
       const saved = JSON.parse(localStorage.getItem(snapshotKey));
-      if ((Number.isFinite(saved?.time) && Math.abs(saved.time) <= 8.64e15) && typeof saved.online === "boolean" &&
+      if (Number.isFinite(saved?.time) && Math.abs(saved.time) <= 8.64e15 && saved.time >= changedAt &&
+          (saved.scenario === scenario || (saved.scenario === undefined && changedAt === 0)) &&
+          typeof saved.online === "boolean" &&
           Array.isArray(saved.zones) && saved.zones.every(zone => zone && Object.hasOwn(statusLabels, zone.status)) &&
-          Array.isArray(saved.alarms) && saved.alarms.every(alarm => alarm && Object.hasOwn(alarmTypes, alarm.type))) return saved;
-      const priorScenario = JSON.parse(localStorage.getItem("mdpc.monitor.alarmHistory.v1"))?.scenario;
-      if (["normal", "offline"].includes(priorScenario)) scenario = priorScenario;
+          Array.isArray(saved.alarms) && saved.alarms.every(alarm => alarm && Object.hasOwn(alarmTypes, alarm.type))) return { ...saved, scenario };
     } catch {
       // The demo works when storage is empty or unavailable.
     }
@@ -121,6 +150,7 @@ const monitoringTelemetry = (() => {
 
   return {
     interval, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
-    alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot, snapshotKey, readSnapshot,
+    alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot,
+    historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot,
   };
 })();
