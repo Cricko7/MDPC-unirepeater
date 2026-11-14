@@ -3,10 +3,99 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="0; url=monitor/">
-  <title>Мониторинг связи · МЦОД Датарк</title>
+  <meta name="theme-color" content="#202430">
+  <meta name="description" content="Проект мобильной связи для МЦОД Датарк: схема размещения оборудования, мониторинг и расчёт LTE-покрытия.">
+  <title>Датарк — мобильная связь в МЦОД</title>
+  <link rel="stylesheet" href="monitor/styles.css?v=datark-design-1">
+  <link rel="stylesheet" href="assets/landing.css?v=1">
+  <script src="assets/landing.js?v=1" defer></script>
 </head>
-<body>
-  <a href="monitor/">Открыть прототип мониторинга</a>
+<body class="landing">
+  <header class="landing-header">
+    <div class="landing-shell landing-nav">
+      <a class="landing-brand" href="./" aria-label="Датарк, главная">
+        <span class="brand-icon"><img src="assets/datark-logo.png" alt=""></span>
+        <span>DATARK</span>
+      </a>
+      <nav aria-label="Основная навигация">
+        <a href="#layout">Схема МЦОД</a>
+        <a href="monitor/">Мониторинг</a>
+        <a href="monitor/budget.html">Калькулятор</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <section class="landing-shell hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">Мобильная связь<br class="hero-break"> внутри МЦОД</h1>
+        <p>Проект LTE-покрытия Датарк. Изучите размещение репитера и антенн, проверьте покрытие пяти зон и откройте демонстрационный мониторинг.</p>
+        <div class="hero-actions">
+          <a class="landing-button primary-action" href="#layout">Изучить схему <span aria-hidden="true">↓</span></a>
+          <a class="landing-button" href="monitor/">Открыть мониторинг <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+      <div class="hero-logo">
+        <img src="assets/datark-logo.png" width="747" height="707" alt="Логотип DATARK со щитом и серверными стойками">
+      </div>
+    </section>
+
+    <section class="landing-shell layout-section" id="layout" aria-labelledby="layout-title">
+      <div class="landing-section-heading">
+        <div>
+          <h2 id="layout-title">Схема размещения оборудования</h2>
+          <p>Выберите антенну или репитер на плане.</p>
+        </div>
+        <a class="text-link" href="docs/mdpc-radio-layout.png" target="_blank" rel="noopener">Полный чертёж ↗</a>
+      </div>
+      <div class="layout-explorer">
+        <div class="drawing">
+          <div class="drawing-toolbar">
+            <span>План МЦОД</span>
+            <div class="zoom-controls" role="group" aria-label="Масштаб плана">
+              <button type="button" id="zoom-out" aria-label="Уменьшить масштаб" disabled>−</button>
+              <output id="zoom-value" aria-live="polite">100%</output>
+              <button type="button" id="zoom-in" aria-label="Увеличить масштаб">+</button>
+            </div>
+          </div>
+          <div class="drawing-scroll" role="region" tabindex="0" aria-label="Прокручиваемый план МЦОД">
+            <div class="floor-map" id="landing-map">
+              <img src="docs/mdpc-radio-layout.png" width="1860" height="1165" alt="План помещений МЦОД с кабельными трассами и точками размещения оборудования">
+              <button class="map-marker" type="button" data-point="A1" aria-label="A1, верхний проход" aria-pressed="false" style="--x: 11.3%; --y: 39.1%">A1</button>
+              <button class="map-marker" type="button" data-point="A2" aria-label="A2, центральный проход" aria-pressed="false" style="--x: 82.8%; --y: 61.3%">A2</button>
+              <button class="map-marker" type="button" data-point="A3" aria-label="A3, нижний проход" aria-pressed="false" style="--x: 83%; --y: 85.9%">A3</button>
+              <button class="map-marker" type="button" data-point="A4" aria-label="A4, энергомодуль" aria-pressed="false" style="--x: 67.2%; --y: 11.4%">A4</button>
+              <button class="map-marker" type="button" data-point="A5" aria-label="A5, технологический тамбур" aria-pressed="false" style="--x: 93.6%; --y: 7.4%">A5</button>
+              <button class="map-marker repeater-point" type="button" data-point="R1" aria-label="R1, LTE-репитер" aria-pressed="true" style="--x: 84.4%; --y: 22.5%">R1</button>
+            </div>
+          </div>
+        </div>
+        <div class="point-panel">
+          <div class="point-details" aria-live="polite">
+            <span id="point-type">R1 · Репитер</span>
+            <h3 id="point-title">LTE-репитер</h3>
+            <p id="point-description">В технологическом тамбуре. Принимает сигнал от наружной антенны и распределяет его по пяти внутренним антеннам.</p>
+          </div>
+          <div class="point-list" role="group" aria-label="Оборудование на плане">
+            <button type="button" data-point="R1" aria-pressed="true"><span>R1</span> Репитер</button>
+            <button type="button" data-point="A1" aria-pressed="false"><span>A1</span> Верхний проход</button>
+            <button type="button" data-point="A2" aria-pressed="false"><span>A2</span> Центральный проход</button>
+            <button type="button" data-point="A3" aria-pressed="false"><span>A3</span> Нижний проход</button>
+            <button type="button" data-point="A4" aria-pressed="false"><span>A4</span> Энергомодуль</button>
+            <button type="button" data-point="A5" aria-pressed="false"><span>A5</span> Технологический тамбур</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-shell resources" aria-labelledby="resources-title">
+      <h2 id="resources-title">Инструменты проекта</h2>
+      <div class="resource-list">
+        <a href="monitor/"><strong>Мониторинг <span aria-hidden="true">→</span></strong><span>RSRP, SINR и журнал тревог на тестовых данных.</span></a>
+        <a href="monitor/budget.html"><strong>Калькулятор покрытия <span aria-hidden="true">→</span></strong><span>Пять LTE-операторов, запас по зонам и проверка тестового GSM-канала.</span></a>
+        <a href="https://github.com/Cricko7/MDPC-unirepeater/blob/main/docs/mdpc-radio-project.md"><strong>Проект МЦОД <span aria-hidden="true">↗</span></strong><span>Оборудование, расчёт радиолинии и эксплуатация.</span></a>
+      </div>
+    </section>
+  </main>
+  <footer class="landing-footer"><div class="landing-shell">Датарк · Проект мобильной связи для МЦОД</div></footer>
 </body>
 </html>

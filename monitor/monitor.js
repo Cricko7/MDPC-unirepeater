@@ -372,7 +372,7 @@ function renderChart() {
   const x = index => 45 + index * (right - 45) / (sampleCount - 1);
   const grid = ticks.map(value => `
     <line x1="45" x2="${right}" y1="${y(value)}" y2="${y(value)}"
-      stroke="${value === threshold ? "#bf9653" : "#3d4944"}" stroke-dasharray="${value === threshold ? "5 4" : "none"}"/>
+      stroke="${value === threshold ? "#bf9653" : "#414a60"}" stroke-dasharray="${value === threshold ? "5 4" : "none"}"/>
     <text x="0" y="${y(value) + 4}">${formatValue(value)}</text>`
   ).join("");
   const path = values.map((value, index) => {
@@ -381,13 +381,13 @@ function renderChart() {
     return `${command}${x(index)},${y(value)}`;
   }).join(" ");
   const points = values.map((value, index) => value == null ? "" : `
-    <circle cx="${x(index)}" cy="${y(value)}" r="3" fill="#bbf487">
+    <circle cx="${x(index)}" cy="${y(value)}" r="3" fill="#ff9b86">
       <title>${timeFormat.format(samples[index].time)} · ${formatValue(value)} ${unit}</title>
     </circle>`).join("");
   const description = values.map(formatValue).join(", ");
   elements.chart.innerHTML = `<svg viewBox="0 0 ${width} 152" role="img"
     aria-label="${label}, ${unit}. Отсчёты: ${description}">
-    ${grid}<path d="${path}" fill="none" stroke="#bbf487" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    ${grid}<path d="${path}" fill="none" stroke="#ff9b86" stroke-width="2" vector-effect="non-scaling-stroke"/>
     ${points}
     <text x="45" y="143">${timeFormat.format(samples[0].time)}</text>
     <text x="${right}" y="143" text-anchor="end">${timeFormat.format(samples.at(-1).time)}</text>
