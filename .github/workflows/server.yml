@@ -138,6 +138,8 @@ jobs:
           print("GET /api/sms-test-results: 200, LTE off and on")
           if "get" not in spec["paths"].get("/api/telemetry", {}):
               raise RuntimeError("Swagger does not list GET /api/telemetry")
+          if "put" not in spec["paths"].get("/admin/telemetry", {}):
+              raise RuntimeError("Swagger does not list PUT /admin/telemetry")
           telemetry = json.loads(get("/api/telemetry?scenario=normal", 200))
           if telemetry.get("source") != "synthetic" or len(telemetry.get("zones", [])) != 5:
               raise RuntimeError("Unexpected telemetry response")

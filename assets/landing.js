@@ -64,6 +64,7 @@ let zoomIndex = 0;
 let selectedPoint = readSelectedZone();
 let sharedZone = selectedPoint;
 let snapshot;
+let telemetryUnavailable = false;
 
 function layoutUrl() {
   const url = new URL(location.pathname, location.origin);
@@ -142,9 +143,15 @@ function syncMonitoring(choice = readScenario(), data = readSnapshot(choice)) {
     marker.title = id + " · " + points[id].title + " · " + label;
     marker.setAttribute("aria-label", marker.title);
   }
-  const source = serverUrl ? "Тестовые данные с сервера" : "Локальная симуляция";
-  dataCaption.textContent = snapshot.time === null ? source : source + " · " + timeFormat.format(snapshot.time);
+  showTelemetrySource();
   showPointTelemetry();
+}
+
+function showTelemetrySource() {
+  if (telemetryUnavailable) return;
+  const manual = snapshot.zones.find(zone => zone.id === selectedPoint)?.manual;
+  const source = manual ? "Ручные тестовые данные" : serverUrl ? "Тестовые данные с сервера" : "Локальная симуляция";
+  dataCaption.textContent = snapshot.time === null ? source : source + " · " + timeFormat.format(snapshot.time);
 }
 
 
@@ -166,7 +173,10 @@ function showPoint(id) {
   for (const control of pointButtons) {
     control.setAttribute("aria-pressed", String(control.dataset.point === id));
   }
-  if (snapshot) showPointTelemetry();
+  if (snapshot) {
+    showPointTelemetry();
+    showTelemetrySource();
+  }
   centerOnPoint(map.querySelector('[data-point="' + id + '"]'));
 }
 
@@ -205,9 +215,11 @@ zoomIn.addEventListener("click", () => changeZoom(1));
 
 const refreshServer = serverUrl && watchTelemetry((data, choice) => {
   const previousScenario = snapshot?.scenario;
+  telemetryUnavailable = false;
   syncMonitoring(choice, data);
   if (snapshot.scenario !== previousScenario) updateShareLink();
 }, () => {
+  telemetryUnavailable = true;
   dataCaption.textContent = snapshot
     ? "Сервер недоступен · показаны последние полученные данные" : "Сервер недоступен · телеметрия не получена";
 });

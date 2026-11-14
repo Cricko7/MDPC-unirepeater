@@ -11,6 +11,142 @@
     }
   ],
   "paths": {
+    "/admin/telemetry": {
+      "put": {
+        "operationId": "replaceZoneTelemetry",
+        "tags": [
+          "Администрирование"
+        ],
+        "summary": "Задать ручную телеметрию одной зоны",
+        "description": "Ручные значения действуют во всех сценариях и сохраняются после перезапуска. Передайте override: null, чтобы вернуть зону к симуляции.",
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Datark-Admin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "telemetry"
+              ],
+              "default": "telemetry"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZoneTelemetryUpdate"
+              },
+              "examples": {
+                "manual": {
+                  "summary": "Деградация сигнала в A3",
+                  "value": {
+                    "zone": "A3",
+                    "override": {
+                      "status": "warning",
+                      "reading": {
+                        "rsrp": -107,
+                        "sinr": 3
+                      },
+                      "alarms": [
+                        "low-signal"
+                      ]
+                    }
+                  }
+                },
+                "restore": {
+                  "summary": "Возврат A3 к симуляции",
+                  "value": {
+                    "zone": "A3",
+                    "override": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ручные данные сохранены или сброшены",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZoneTelemetryUpdate"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некорректная зона или телеметрия",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Требуется вход",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Нужны JSON и X-Datark-Admin: telemetry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Недопустимый размер тела",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ошибка записи",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Авторизация не настроена",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/telemetry": {
       "get": {
         "operationId": "getTelemetry",
@@ -453,6 +589,64 @@
       }
     },
     "schemas": {
+      "ZoneTelemetryUpdate": {
+        "type": "object",
+        "required": [
+          "zone",
+          "override"
+        ],
+        "properties": {
+          "zone": {
+            "type": "string",
+            "enum": [
+              "A1",
+              "A2",
+              "A3",
+              "A4",
+              "A5"
+            ]
+          },
+          "override": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "status",
+                  "reading",
+                  "alarms"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "good",
+                      "warning",
+                      "critical"
+                    ]
+                  },
+                  "reading": {
+                    "$ref": "#/components/schemas/ZoneReading"
+                  },
+                  "alarms": {
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "low-signal",
+                        "no-telemetry"
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
     "Telemetry": {
       "type": "object",
       "required": [
@@ -499,7 +693,8 @@
             "required": [
               "id",
               "status",
-              "reading"
+              "reading",
+              "manual"
             ],
             "properties": {
               "id": {
@@ -522,6 +717,10 @@
               },
               "reading": {
                 "$ref": "#/components/schemas/ZoneReading"
+              },
+              "manual": {
+                "type": "boolean",
+                "description": "В зоне действуют ручные тестовые значения."
               }
             }
           },

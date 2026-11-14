@@ -324,7 +324,7 @@ function renderFloor(states, alarms, online) {
     marker.setAttribute("aria-pressed", String(zone.id === selectedZone));
   }
 
-  const { zone, status, reading } = states.find(state => state.zone.id === selectedZone);
+  const { zone, status, reading, manual } = states.find(state => state.zone.id === selectedZone);
   const values = Object.entries(metrics).map(([key, { label, unit }]) => `
     <div><dt>${label}</dt><dd>${formatValue(reading?.[key])}${reading ? ` <small>${unit}</small>` : ""}</dd></div>`
   ).join("");
@@ -336,6 +336,7 @@ function renderFloor(states, alarms, online) {
   elements["zone-details"].innerHTML = `
     <h3 id="zone-details-title">${zone.id} · ${zone.name}</h3>
     ${statusBadge(status)}
+    ${manual ? "<p>Ручные тестовые данные</p>" : ""}
     <dl>${values}</dl>
     <h4>Тревоги зоны</h4>
     ${alarmDetails}`;

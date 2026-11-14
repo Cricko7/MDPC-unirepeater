@@ -64,6 +64,7 @@ def check(base):
     assert spec["paths"]["/admin/settings"]["put"]["security"] == [{"BasicAuth": []}]
     assert "get" in spec["paths"]["/api/sms-test-results"]
     assert "get" in spec["paths"]["/api/telemetry"]
+    assert "put" in spec["paths"]["/admin/telemetry"]
     editor = "https://editor.swagger.io"
     for path in ("/healthz", "/assets/site-defaults.json", "/api/sms-test-results"):
         request(path, headers={"Origin": editor}, cors_origin=editor)
@@ -115,6 +116,26 @@ def check(base):
     assert offline["scenario"] == "offline" and not offline["online"]
     assert {"sourceId": "R1", "type": "rf-off"} in offline["alarms"]
     assert all(zone["reading"] is None for zone in offline["zones"])
+    telemetry_path = "/admin/telemetry"
+    override = {"status": "warning", "reading": {"rsrp": -107, "sinr": 3}, "alarms": ["low-signal"]}
+    update = {"zone": "A3", "override": override}
+    telemetry_auth = {**write, "X-Datark-Admin": "telemetry"}
+    request(telemetry_path, 401, body=update, headers=swagger_auth)
+    request(telemetry_path, 403, body=update, headers=write)
+    request(telemetry_path, 400, body={**update, "zone": "../A3"}, headers=telemetry_auth)
+    request(telemetry_path, 400, body={**update, "override": {**override, "alarms": ["rf-off"]}}, headers=telemetry_auth)
+    request(telemetry_path, 400, body={**update, "override": {**override, "reading": {"rsrp": True, "sinr": 3}}},
+            headers=telemetry_auth)
+    assert json.loads(request(telemetry_path, body=update, headers=telemetry_auth)) == update
+    for scenario in ("normal", "offline"):
+        sample = json.loads(request(f"/api/telemetry?scenario={scenario}"))
+        assert sample["zones"][2] == {"id": "A3", "status": "warning", "reading": override["reading"], "manual": True}
+        assert {"sourceId": "A3", "type": "low-signal"} in sample["alarms"]
+        assert sample["samples"][-1]["zones"]["A3"] == override["reading"]
+        assert sum(zone["manual"] for zone in sample["zones"]) == 1
+    reset = {"zone": "A3", "override": None}
+    assert json.loads(request(telemetry_path, body=reset, headers=telemetry_auth)) == reset
+    assert not json.loads(request("/api/telemetry?scenario=normal"))["zones"][2]["manual"]
     settings["calculator"]["operators"][0]["dl_mhz"] = 100
     request("/admin/settings", 400, body=settings, headers=write)
     assert "dl_mhz" not in json.loads(request("/assets/site-defaults.json"))["calculator"]["operators"][0]

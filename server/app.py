@@ -35,29 +35,42 @@ EDITOR_PATHS = {"/healthz", "/assets/site-defaults.json", "/api/sms-test-results
 
 TELEMETRY_INTERVAL_MS = 5000
 ZONE_BASELINES = ((-89, 15), (-91, 12), (-85, 18), (-93, 10), (-82, 20))
+ZONE_IDS = tuple(f"A{number}" for number in range(1, len(ZONE_BASELINES) + 1))
 TELEMETRY_DRIFT = (0, 2, 1, -1, -2, 1, 0, -1)
+ZONE_ALARMS = ("low-signal", "no-telemetry")
 
 
-def telemetry(scenario, now_ms):
+def telemetry(scenario, now_ms, overrides):
     slot = now_ms // TELEMETRY_INTERVAL_MS
     online = scenario != "offline"
     zones = []
     alarms = [] if online else [{"sourceId": "R1", "type": "rf-off"}]
     samples = [{"time": tick * TELEMETRY_INTERVAL_MS, "zones": {}} for tick in range(slot - 7, slot + 1)]
-    for number, (rsrp, sinr) in enumerate(ZONE_BASELINES, 1):
-        zone_id = f"A{number}"
+    for number, (zone_id, (rsrp, sinr)) in enumerate(zip(ZONE_IDS, ZONE_BASELINES), 1):
+        override = overrides.get(zone_id)
         status = "good"
-        if not online or (scenario == "mixed" and zone_id == "A5"):
+        if override is not None:
+            status = override["status"]
+            alarm_types = override["alarms"]
+        elif not online or (scenario == "mixed" and zone_id == "A5"):
             status = "critical"
-            alarms.append({"sourceId": zone_id, "type": "no-telemetry"})
+            alarm_types = ("no-telemetry",)
         elif scenario == "mixed" and zone_id == "A2":
             rsrp, sinr = -105, 2
             status = "warning"
-            alarms.append({"sourceId": zone_id, "type": "low-signal"})
+            alarm_types = ("low-signal",)
+        else:
+            alarm_types = ()
+        alarms.extend({"sourceId": zone_id, "type": kind} for kind in alarm_types)
         for sample in samples:
             drift = TELEMETRY_DRIFT[(sample["time"] // TELEMETRY_INTERVAL_MS + number) % len(TELEMETRY_DRIFT)]
-            sample["zones"][zone_id] = None if status == "critical" else {"rsrp": rsrp + drift, "sinr": sinr + drift}
-        zones.append({"id": zone_id, "status": status, "reading": samples[-1]["zones"][zone_id]})
+            if override is not None:
+                reading = override["reading"]
+            else:
+                reading = None if status == "critical" else {"rsrp": rsrp + drift, "sinr": sinr + drift}
+            sample["zones"][zone_id] = reading
+        zones.append({"id": zone_id, "status": status, "reading": samples[-1]["zones"][zone_id],
+                      "manual": override is not None})
     drift = TELEMETRY_DRIFT[slot % len(TELEMETRY_DRIFT)]
     return {
         "source": "synthetic", "time": samples[-1]["time"], "scenario": scenario,
@@ -145,17 +158,52 @@ def load_settings():
         return DEFAULTS
 
 
-def save_settings(settings):
+def save_json(destination, value):
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=DATA, delete=False) as stream:
         path = Path(stream.name)
         try:
-            json.dump(settings, stream, ensure_ascii=False, allow_nan=False)
+            json.dump(value, stream, ensure_ascii=False, allow_nan=False)
             stream.flush()
             os.fsync(stream.fileno())
             stream.close()
-            os.replace(path, SETTINGS)
+            os.replace(path, destination)
         finally:
             path.unlink(missing_ok=True)
+
+
+def zone_file(zone):
+    return DATA / f"telemetry-{zone}.json"
+
+
+def read_zone_overrides():
+    overrides = {}
+    for zone in ZONE_IDS:
+        try:
+            overrides[zone] = json.loads(zone_file(zone).read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            continue
+    return overrides
+
+
+def validate_zone_override(body):
+    if not isinstance(body, dict) or body.get("zone") not in ZONE_IDS or "override" not in body:
+        raise ValueError("Укажите зону A1–A5 и поле override.")
+    override = body["override"]
+    if override is None:
+        return body["zone"], None
+    if not isinstance(override, dict) or override.get("status") not in ("good", "warning", "critical"):
+        raise ValueError("Укажите статус good, warning или critical.")
+    reading = override.get("reading")
+    if "reading" not in override or (reading is not None and (
+        not isinstance(reading, dict) or any(not finite(reading.get(key)) for key in ("rsrp", "sinr"))
+    )):
+        raise ValueError("Укажите числовые RSRP и SINR или передайте reading: null.")
+    alarms = override.get("alarms")
+    if not isinstance(alarms, list) or any(kind not in ZONE_ALARMS for kind in alarms) or len(alarms) != len(set(alarms)):
+        raise ValueError("Укажите список уникальных тревог low-signal и no-telemetry.")
+    return body["zone"], {"status": override["status"], "reading": (
+        None if reading is None else {key: reading[key] for key in ("rsrp", "sinr")}
+    ), "alarms": alarms}
 
 
 def digest(value):
@@ -278,13 +326,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             scenario = requested[0] if requested else load_settings()["scenario"]
+            overrides = read_zone_overrides()
         except (OSError, ValueError, KeyError, TypeError):
             self.json(503, {"error": "Настройки сервера недоступны."})
             return
         if scenario not in ("mixed", "normal", "offline"):
             self.json(503, {"error": "Настройки сервера недоступны."})
             return
-        self.json(200, telemetry(scenario, time.time_ns() // 1_000_000))
+        self.json(200, telemetry(scenario, time.time_ns() // 1_000_000, overrides))
 
     def serve_file(self, root, name):
         try:
@@ -322,13 +371,14 @@ class Handler(BaseHTTPRequestHandler):
         self.send_payload(200, content, media_type)
 
     def do_PUT(self):
-        if urlsplit(self.path).path != "/admin/settings":
+        resource = urlsplit(self.path).path
+        if resource not in ("/admin/settings", "/admin/telemetry"):
             self.json(404, {"error": "Страница не найдена."})
             return
         if not self.authorize():
             return
         # A browser on another origin cannot supply this header without CORS permission.
-        if self.headers.get("X-Datark-Admin") != "settings" or self.headers.get_content_type() != "application/json":
+        if self.headers.get("X-Datark-Admin") != resource.rsplit("/", 1)[-1] or self.headers.get_content_type() != "application/json":
             self.json(403, {"error": "Запрос отклонён."})
             return
         try:
@@ -339,17 +389,30 @@ class Handler(BaseHTTPRequestHandler):
             self.json(413, {"error": "Недопустимый размер запроса."})
             return
         try:
-            settings = validate(json.loads(self.rfile.read(size)))
+            body = json.loads(self.rfile.read(size))
+            if resource == "/admin/settings":
+                settings = validate(body)
+            else:
+                zone, override = validate_zone_override(body)
         except (ValueError, OverflowError, RecursionError) as error:
             message = str(error) if type(error) is ValueError else "Некорректные параметры."
             self.json(400, {"error": message})
             return
         try:
-            save_settings(settings)
+            if resource == "/admin/settings":
+                save_json(SETTINGS, settings)
+                result = settings
+            else:
+                file = zone_file(zone)
+                if override is None:
+                    file.unlink(missing_ok=True)
+                else:
+                    save_json(file, override)
+                result = {"zone": zone, "override": override}
         except OSError:
             self.json(500, {"error": "Хранилище настроек недоступно для записи."})
             return
-        self.json(200, settings)
+        self.json(200, result)
 
 
 if __name__ == "__main__":

@@ -278,7 +278,8 @@
             "required": [
               "id",
               "status",
-              "reading"
+              "reading",
+              "manual"
             ],
             "properties": {
               "id": {
@@ -301,6 +302,10 @@
               },
               "reading": {
                 "$ref": "#/components/schemas/ZoneReading"
+              },
+              "manual": {
+                "type": "boolean",
+                "description": "В зоне действуют ручные тестовые значения."
               }
             }
           },
