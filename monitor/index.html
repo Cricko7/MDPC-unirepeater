@@ -10,7 +10,7 @@
   <script src="../assets/toasts.js?v=3" defer></script>
   <script src="../assets/site-config.js?v=1" defer></script>
   <script src="telemetry.js?v=4" defer></script>
-  <script src="monitor.js?v=alarm-severity-1" defer></script>
+  <script src="monitor.js?v=alarm-zone-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -38,6 +38,9 @@
           <select id="alarm-notification-level" aria-label="Критичность уведомлений">
             <option value="all">Все тревоги</option>
             <option value="critical">Только критические</option>
+          </select>
+          <select id="alarm-notification-zone" aria-label="Зона уведомлений">
+            <option value="all">Все зоны</option>
           </select>
         </div>
       </div>
