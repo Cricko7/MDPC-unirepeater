@@ -105,6 +105,27 @@ const monitoringTelemetry = (() => {
   const snapshotKey = "mdpc.monitor.snapshot.v1";
 
   const scenarioKey = "mdpc.monitor.scenario.v1";
+  const selectedZoneKey = "mdpc.monitor.selectedZone.v1";
+  const defaultZone = "A2";
+
+  function readSelectedZone() {
+    try {
+      const id = localStorage.getItem(selectedZoneKey);
+      if (zones.some(zone => zone.id === id)) return id;
+    } catch {
+      // Use the default zone when storage is unavailable.
+    }
+    return defaultZone;
+  }
+
+  function saveSelectedZone(id) {
+    try {
+      localStorage.setItem(selectedZoneKey, id);
+    } catch {
+      // Keep the selection on the current page.
+    }
+  }
+
   const historyStorageKey = "mdpc.monitor.alarmHistory.v1";
 
   function validScenario(value) {
@@ -152,5 +173,6 @@ const monitoringTelemetry = (() => {
     interval, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
     alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot,
     historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot,
+    selectedZoneKey, readSelectedZone, saveSelectedZone,
   };
 })();

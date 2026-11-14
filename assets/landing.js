@@ -29,6 +29,7 @@ const points = {
 const {
   statusLabels, severityLabels, alarmDetails, alarmTypes, formatValue, metrics,
   snapshotKey, scenarioKey, chooseScenario, readSnapshot,
+  selectedZoneKey, readSelectedZone, saveSelectedZone,
 } = monitoringTelemetry;
 const scenarioSelect = document.querySelector("#landing-scenario");
 const pointButtons = document.querySelectorAll("[data-point]");
@@ -54,7 +55,8 @@ const timeFormat = new Intl.DateTimeFormat("ru-RU", {
 });
 const zoomLevels = [100, 125, 150, 200];
 let zoomIndex = 0;
-let selectedPoint = "R1";
+let selectedPoint = readSelectedZone();
+let sharedZone = selectedPoint;
 let snapshot;
 
 function showPointTelemetry() {
@@ -116,19 +118,34 @@ function centerOnPoint(marker) {
   });
 }
 
+function showPoint(id) {
+  selectedPoint = id;
+  const { type = "Антенна", title, description } = points[id];
+  pointType.textContent = id + " · " + type;
+  pointTitle.textContent = title;
+  pointDescription.textContent = description;
+  for (const control of pointButtons) {
+    control.setAttribute("aria-pressed", String(control.dataset.point === id));
+  }
+  showPointTelemetry();
+  centerOnPoint(map.querySelector('[data-point="' + id + '"]'));
+}
+
+function syncSelectedZone() {
+  const id = readSelectedZone();
+  if (sharedZone === id) return;
+  sharedZone = id;
+  showPoint(id);
+}
+
 for (const button of pointButtons) {
   button.addEventListener("click", () => {
     const id = button.dataset.point;
-    selectedPoint = id;
-    const { type = "Антенна", title, description } = points[id];
-    pointType.textContent = id + " · " + type;
-    pointTitle.textContent = title;
-    pointDescription.textContent = description;
-    for (const control of pointButtons) {
-      control.setAttribute("aria-pressed", String(control.dataset.point === id));
+    if (id !== "R1") {
+      sharedZone = id;
+      saveSelectedZone(id);
     }
-    showPointTelemetry();
-    centerOnPoint(map.querySelector('[data-point="' + id + '"]'));
+    showPoint(id);
   });
 }
 
@@ -148,8 +165,12 @@ zoomIn.addEventListener("click", () => changeZoom(1));
 scenarioSelect.addEventListener("change", () => syncMonitoring(chooseScenario(scenarioSelect.value)));
 window.addEventListener("storage", event => {
   if (event.key === scenarioKey || event.key === snapshotKey || event.key === null) syncMonitoring();
+  if (event.key === selectedZoneKey || event.key === null) syncSelectedZone();
 });
 window.addEventListener("pageshow", event => {
-  if (event.persisted) syncMonitoring();
+  if (!event.persisted) return;
+  syncMonitoring();
+  syncSelectedZone();
 });
 syncMonitoring();
+showPoint(selectedPoint);

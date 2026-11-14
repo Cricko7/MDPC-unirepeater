@@ -4,6 +4,7 @@ const {
   interval, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
   alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot,
   historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario,
+  selectedZoneKey, readSelectedZone, saveSelectedZone,
 } = monitoringTelemetry;
 const historyPageSizeKey = "mdpc.monitor.historyPageSize";
 const elements = Object.fromEntries([
@@ -31,7 +32,7 @@ const openAlarms = new Map(alarmHistory.filter(entry => entry.recoveredAt === nu
 
 let scenario = readScenario().id;
 elements.scenario.value = scenario;
-let selectedZone = "A2";
+let selectedZone = readSelectedZone();
 let selectedMetric = "rsrp";
 let samples = [];
 let sequence = 0;
@@ -369,22 +370,35 @@ elements.scenario.addEventListener("change", () => {
   applyScenario(id);
 });
 window.addEventListener("storage", event => {
-  if (event.key === scenarioKey) applyScenario(readScenario().id);
+  if (event.key === scenarioKey || event.key === null) applyScenario(readScenario().id);
+  if (event.key === selectedZoneKey || event.key === null) syncSelectedZone();
 });
 window.addEventListener("pageshow", event => {
-  if (event.persisted) applyScenario(readScenario().id);
+  if (!event.persisted) return;
+  applyScenario(readScenario().id);
+  syncSelectedZone();
 });
 elements.refresh.addEventListener("click", () => {
   nextSample();
   restartTimer();
   elements.announcement.textContent = elements.updated.textContent;
 });
+function showZone(id) {
+  if (selectedZone === id) return;
+  selectedZone = id;
+  render();
+  elements.announcement.textContent = elements["zone-details"].innerText;
+}
+
+function syncSelectedZone() {
+  showZone(readSelectedZone());
+}
+
 function selectZone(event) {
   const button = event.target.closest("[data-zone]");
   if (!button) return;
-  selectedZone = button.dataset.zone;
-  render();
-  elements.announcement.textContent = elements["zone-details"].innerText;
+  saveSelectedZone(button.dataset.zone);
+  showZone(button.dataset.zone);
 }
 
 elements.zones.addEventListener("click", selectZone);
