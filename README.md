@@ -13,6 +13,8 @@
 
 [Открыть сайт Датарк на VPS](https://72.56.14.198/)
 
+[PDF-отчёт для эксперта](docs/datark-expert-report.pdf)
+
 <details>
 <summary>Три скриншота сайта на VPS</summary>
 
