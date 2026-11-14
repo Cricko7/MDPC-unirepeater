@@ -312,6 +312,8 @@ function scenarioComparison(operators, scenario) {
   const status = document.getElementById("compare-status");
   const results = document.getElementById("compare-results");
   const exportButton = document.getElementById("compare-export");
+  const swapButton = document.getElementById("compare-swap");
+  const clearButton = document.getElementById("compare-clear");
   let comparison = null;
   let entries = [];
   const saved = loadBudgetSettings(comparisonKey);
@@ -332,6 +334,8 @@ function scenarioComparison(operators, scenario) {
     results.hidden = true;
     comparison = null;
     exportButton.disabled = true;
+    swapButton.disabled = true;
+    clearButton.disabled = !selects.some(select => select.value);
     if (entries.length < 2) {
       status.textContent = "Сохраните два сценария для сравнения.";
       return;
@@ -340,6 +344,7 @@ function scenarioComparison(operators, scenario) {
       status.textContent = "Выберите два разных сценария.";
       return;
     }
+    swapButton.disabled = false;
     const pair = selects.map(select => entries.find(entry => entry.name === select.value));
     let carriers;
     try {
@@ -404,9 +409,21 @@ function scenarioComparison(operators, scenario) {
   exportButton.addEventListener("click", () => {
     if (comparison) downloadComparison(comparison);
   });
-  for (const select of selects) select.addEventListener("change", () => {
+  function updateSelection() {
     saveSelection();
     render();
+  }
+
+  for (const select of selects) select.addEventListener("change", updateSelection);
+  swapButton.addEventListener("click", () => {
+    const [a, b] = selects.map(select => select.value);
+    selects[0].value = b;
+    selects[1].value = a;
+    updateSelection();
+  });
+  clearButton.addEventListener("click", () => {
+    for (const select of selects) select.value = "";
+    updateSelection();
   });
   return (updated, renamed = {}) => {
     entries = updated;
@@ -418,8 +435,7 @@ function scenarioComparison(operators, scenario) {
       if (entries.some(entry => entry.name === previous)) select.value = previous;
       select.disabled = entries.length < 2;
     }
-    saveSelection();
-    render();
+    updateSelection();
   };
 }
 
