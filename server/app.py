@@ -29,6 +29,8 @@ ADMIN_USER = os.environ.get("DATARK_ADMIN_USER", "admin")
 PASSWORD_FILE = Path(os.environ.get("DATARK_PASSWORD_FILE", "/run/datark/admin-password"))
 REVISION = os.environ.get("DATARK_REVISION", "local")
 SWAGGER_TOKEN_SHA256 = os.environ.get("DATARK_SWAGGER_TOKEN_SHA256", "")
+EDITOR_ORIGINS = {"https://editor.swagger.io", "https://jdegre.github.io"}
+EDITOR_PATHS = {"/healthz", "/assets/site-defaults.json", "/api/sms-test-results"}
 
 # Each value is the delay in milliseconds for one sent SMS. None means
 # no confirmed delivery. These fixtures never contact a modem.
@@ -143,6 +145,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", media_type)
         self.send_header("Content-Length", str(len(content)))
         self.send_header("Cache-Control", "no-store")
+        if self.command in ("GET", "HEAD") and urlsplit(self.path).path in EDITOR_PATHS:
+            self.send_header("Vary", "Origin")
+            origin = self.headers.get("Origin")
+            if origin in EDITOR_ORIGINS:
+                self.send_header("Access-Control-Allow-Origin", origin)
         self.send_header("X-Content-Type-Options", "nosniff")
         policy = "default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'"
         if urlsplit(self.path).path == "/admin/api/":

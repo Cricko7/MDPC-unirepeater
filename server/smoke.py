@@ -23,7 +23,7 @@ SWAGGER_TOKEN_SHA256 = hashlib.sha256(SWAGGER_TOKEN.encode()).hexdigest()
 def check(base):
     auth = {"Authorization": "Basic " + base64.b64encode(b"admin:smoke-only-password").decode()}
 
-    def request(path, status=200, headers=None, body=None):
+    def request(path, status=200, headers=None, body=None, cors_origin=None):
         data = None if body is None else json.dumps(body).encode()
         req = Request(base + path, data=data, headers=headers or {}, method="PUT" if data else "GET")
         try:
@@ -32,6 +32,7 @@ def check(base):
             response = error
         with response:
             assert response.status == status, (path, response.status, status)
+            assert response.headers.get("Access-Control-Allow-Origin") == cors_origin
             return response.read()
 
     for _ in range(30):
@@ -60,6 +61,12 @@ def check(base):
     spec = json.loads(request("/admin/api/openapi.json", headers=auth))
     assert spec["paths"]["/admin/settings"]["put"]["security"] == [{"BasicAuth": []}]
     assert "get" in spec["paths"]["/api/sms-test-results"]
+    editor = "https://editor.swagger.io"
+    for path in ("/healthz", "/assets/site-defaults.json", "/api/sms-test-results"):
+        request(path, headers={"Origin": editor}, cors_origin=editor)
+    request("/admin/api/", 401, headers={"Origin": editor})
+    request("/admin/settings", headers={**auth, "Origin": editor})
+    request("/api/sms-test-results", headers={"Origin": "https://example.org"})
     sms = json.loads(request("/api/sms-test-results"))
     assert sms == {"source": "synthetic", "results": [
         {"lte_mode": "off", "sent": 10, "delivered": 10,
