@@ -68,6 +68,7 @@ jobs:
       group: datark-production
     steps:
       - name: Deploy on the Linux server
+        id: rollout
         env:
           DEPLOY_HOST: ${{ vars.DATARK_DEPLOY_HOST }}
           DEPLOY_USER: ${{ vars.DATARK_DEPLOY_USER }}
@@ -76,7 +77,8 @@ jobs:
           IMAGE: ${{ needs.publish.outputs.image }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" != "$GITHUB_SHA" ]]; then
+          main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          if [[ "$main_sha" != "$GITHUB_SHA" ]]; then
             echo "Skipping deployment because main has moved."
             exit 0
           fi
@@ -87,3 +89,48 @@ jobs:
           ssh -i "$RUNNER_TEMP/datark-key" -o IdentitiesOnly=yes -o BatchMode=yes \
             -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/datark-known-hosts" \
             -l "$DEPLOY_USER" -- "$DEPLOY_HOST" /opt/datark/deploy/deploy.sh "$IMAGE"
+          echo "deployed=true" >> "$GITHUB_OUTPUT"
+      - name: Verify the deployed API over HTTPS
+        if: steps.rollout.outputs.deployed == 'true'
+        env:
+          DEPLOY_HOST: ${{ vars.DATARK_DEPLOY_HOST }}
+          SWAGGER_TOKEN: ${{ secrets.DATARK_SWAGGER_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from http.client import HTTPSConnection
+
+          host = os.environ["DEPLOY_HOST"]
+          token = os.environ["SWAGGER_TOKEN"]
+          if not token:
+              raise SystemExit("Set the production secret DATARK_SWAGGER_TOKEN.")
+
+          def get(path, expected, headers=None):
+              connection = HTTPSConnection(host, timeout=15)
+              try:
+                  connection.request("GET", path, headers=headers or {})
+                  response = connection.getresponse()
+                  if response.status != expected:
+                      raise SystemExit(f"GET {path}: expected {expected}, got {response.status}")
+                  return response.read()
+              finally:
+                  connection.close()
+
+          health = json.loads(get("/healthz", 200))
+          if health.get("status") != "ok" or health.get("revision") != os.environ["GITHUB_SHA"]:
+              raise SystemExit("GET /healthz did not report ok for the deployed commit.")
+          print(f"GET /healthz: ok, revision {health['revision']}")
+
+          get("/admin/api/", 401)
+          print("GET /admin/api/ without credentials: 401")
+          headers = {"Authorization": f"Bearer {token}"}
+          if b'id="swagger-ui"' not in get("/admin/api/", 200, headers):
+              raise SystemExit("The authenticated page does not contain Swagger UI.")
+          spec = json.loads(get("/admin/api/openapi.json", 200, headers))
+          if not spec.get("openapi") or "/healthz" not in spec.get("paths", {}):
+              raise SystemExit("Swagger returned an invalid API description.")
+          if b"SwaggerUIBundle" not in get("/admin/api/vendor/swagger-ui-bundle.js", 200, headers):
+              raise SystemExit("The Swagger UI bundle is missing or invalid.")
+          print("Swagger UI, OpenAPI JSON and JavaScript bundle: 200 after login")
+          PY

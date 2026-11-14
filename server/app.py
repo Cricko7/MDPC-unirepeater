@@ -28,6 +28,7 @@ MAX_BODY = 16384
 ADMIN_USER = os.environ.get("DATARK_ADMIN_USER", "admin")
 PASSWORD_FILE = Path(os.environ.get("DATARK_PASSWORD_FILE", "/run/datark/admin-password"))
 REVISION = os.environ.get("DATARK_REVISION", "local")
+SWAGGER_TOKEN_SHA256 = os.environ.get("DATARK_SWAGGER_TOKEN_SHA256", "")
 
 
 def finite(value):
@@ -150,6 +151,15 @@ class Handler(BaseHTTPRequestHandler):
         self.json(401, {"error": "Требуется вход."}, {"WWW-Authenticate": 'Basic realm="Datark admin", charset="UTF-8"'})
         return False
 
+    def authorize_swagger(self):
+        scheme, _, token = self.headers.get("Authorization", "").partition(" ")
+        return (
+            bool(SWAGGER_TOKEN_SHA256)
+            and scheme.lower() == "bearer"
+            and bool(token)
+            and secrets.compare_digest(digest(token).hex().encode(), SWAGGER_TOKEN_SHA256.encode())
+        )
+
     def do_GET(self):
         path = unquote(urlsplit(self.path).path)
         if path == "/healthz":
@@ -162,6 +172,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/assets/site-defaults.json":
             self.send_settings()
+            return
+        if path.startswith("/admin/api/"):
+            if self.authorize_swagger() or self.authorize():
+                self.serve_file(ADMIN / "api", path.removeprefix("/admin/api/"))
             return
         if path == "/admin" or path.startswith("/admin/"):
             if not self.authorize():

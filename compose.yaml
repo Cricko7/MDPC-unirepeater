@@ -5,6 +5,7 @@ services:
       - "127.0.0.1:${DATARK_PORT:-8080}:8080"
     environment:
       DATARK_ADMIN_USER: ${DATARK_ADMIN_USER:-admin}
+      DATARK_SWAGGER_TOKEN_SHA256: ${DATARK_SWAGGER_TOKEN_SHA256:-}
     volumes:
       - settings:/data
     secrets:

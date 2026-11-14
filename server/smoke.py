@@ -2,6 +2,7 @@
 
 import argparse
 import base64
+import hashlib
 import json
 import os
 import shutil
@@ -15,6 +16,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
+SWAGGER_TOKEN = "smoke-only-swagger-token"
+SWAGGER_TOKEN_SHA256 = hashlib.sha256(SWAGGER_TOKEN.encode()).hexdigest()
 
 
 def check(base):
@@ -49,12 +52,19 @@ def check(base):
     assert b'id="swagger-ui"' in request("/admin/api/", headers=auth)
     spec = json.loads(request("/admin/api/openapi.json", headers=auth))
     assert spec["paths"]["/admin/settings"]["put"]["security"] == [{"BasicAuth": []}]
+    swagger_auth = {"Authorization": f"Bearer {SWAGGER_TOKEN}"}
+    assert b'id="swagger-ui"' in request("/admin/api/", headers=swagger_auth)
+    request("/admin/api/", 401, headers={"Authorization": "Bearer wrong-token"})
+    request("/admin/api/%2e%2e/index.html", 404, headers=swagger_auth)
+    request("/admin/", 401, headers=swagger_auth)
+    request("/admin/settings", 401, headers=swagger_auth)
     request("/server/app.py", 404)
     request("/admin/%2e%2e/app.py", 404, headers=auth)
     request("/admin/settings", 401)
     assert b'id="settings"' in request("/admin/", headers=auth)
     settings = json.loads(request("/admin/settings", headers=auth))
     request("/admin/settings", 401, body=settings)
+    request("/admin/settings", 401, body=settings, headers=swagger_auth)
     request("/admin/settings", 403, body=settings, headers=auth)
     write = {**auth, "Content-Type": "application/json", "X-Datark-Admin": "settings"}
     request("/admin/settings", 400, body={**settings, "scenario": "invalid"}, headers=write)
@@ -81,7 +91,8 @@ def main():
         if args.docker:
             project = ["docker", "compose", "--project-name", f"datark-smoke-{os.getpid()}"]
             env = {**os.environ, "DATARK_ADMIN_PASSWORD_FILE": str(password), "DATARK_IMAGE": "datark:local",
-                   "DATARK_ADMIN_USER": "admin", "DATARK_PORT": "0"}
+                   "DATARK_ADMIN_USER": "admin", "DATARK_PORT": "0",
+                   "DATARK_SWAGGER_TOKEN_SHA256": SWAGGER_TOKEN_SHA256}
             try:
                 subprocess.run([*project, "up", "-d", "--wait", "--wait-timeout", "45"], env=env, check=True)
                 address = subprocess.check_output([*project, "port", "web", "8080"], env=env, text=True).strip()
@@ -111,6 +122,7 @@ def main():
                 **os.environ, "DATARK_ROOT": str(work), "DATARK_DATA": str(work / "data"),
                 "DATARK_PASSWORD_FILE": str(password), "DATARK_ADMIN_USER": "admin",
                 "PORT": str(port), "DATARK_BIND": "127.0.0.1",
+                "DATARK_SWAGGER_TOKEN_SHA256": SWAGGER_TOKEN_SHA256,
             }
             with subprocess.Popen([sys.executable, str(ROOT / "server/app.py")], env=env) as process:
                 try:
