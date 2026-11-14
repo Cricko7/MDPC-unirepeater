@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Датарк — публичный API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Публичные GET-запросы демонстрационного сервера. Результаты испытаний SMS синтетические."
   },
   "servers": [
@@ -21,6 +21,22 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "ok",
+                  "revision": "61f46dbc19a9a565d27d0e3c008696ae277dea9a"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "description": "Присутствует при запросе с разрешённого адреса Swagger Editor.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "https://editor.swagger.io",
+                    "https://jdegre.github.io"
+                  ]
                 }
               }
             }
@@ -31,11 +47,32 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "status": "unhealthy",
+                  "revision": "61f46dbc19a9a565d27d0e3c008696ae277dea9a"
+                }
+              }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "description": "Присутствует при запросе с разрешённого адреса Swagger Editor.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "https://editor.swagger.io",
+                    "https://jdegre.github.io"
+                  ]
                 }
               }
             }
           }
-        }
+        },
+        "operationId": "getHealth",
+        "tags": [
+          "Диагностика"
+        ],
+        "description": "Возвращает состояние и ревизию развёрнутого образа. При недоступной или некорректной конфигурации возвращает 503."
       }
     },
     "/assets/site-defaults.json": {
@@ -50,6 +87,18 @@
                   "$ref": "#/components/schemas/Settings"
                 }
               }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "description": "Присутствует при запросе с разрешённого адреса Swagger Editor.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "https://editor.swagger.io",
+                    "https://jdegre.github.io"
+                  ]
+                }
+              }
             }
           },
           "503": {
@@ -60,15 +109,32 @@
                   "$ref": "#/components/schemas/Error"
                 }
               }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "description": "Присутствует при запросе с разрешённого адреса Swagger Editor.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "https://editor.swagger.io",
+                    "https://jdegre.github.io"
+                  ]
+                }
+              }
             }
           }
-        }
+        },
+        "operationId": "getSiteDefaults",
+        "tags": [
+          "Настройки сайта"
+        ],
+        "description": "Читает общие стартовые параметры мониторинга, LTE и тестового GSM."
       }
     },
     "/api/sms-test-results": {
       "get": {
         "summary": "Результаты испытаний аварийных SMS",
-        "description": "Две синтетические серии при выключенном и включённом LTE. Задержка считается от отправки до подтверждённого приёма и агрегируется только для доставленных SMS.",
+        "description": "Возвращает две синтетические серии при выключенном и включённом LTE. Задержка считается от отправки до подтверждённого приёма. В интерфейсе процент доставки равен delivered / sent × 100, а изменение средней задержки равно mean при включённом LTE минус mean при выключенном LTE. Если отправок или подтверждённых доставок недостаточно, соответствующая метрика отсутствует в сравнении.",
         "responses": {
           "200": {
             "description": "Сводка по обоим режимам LTE",
@@ -103,9 +169,25 @@
                   ]
                 }
               }
+            },
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "description": "Присутствует при запросе с разрешённого адреса Swagger Editor.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "https://editor.swagger.io",
+                    "https://jdegre.github.io"
+                  ]
+                }
+              }
             }
           }
-        }
+        },
+        "operationId": "getSmsTestResults",
+        "tags": [
+          "Испытания SMS"
+        ]
       }
     }
   },

@@ -72,8 +72,10 @@ form.addEventListener("submit", async event => {
       } }),
     });
     result.textContent = "Стартовые настройки сохранены.";
+    showToast(result.textContent);
   } catch (error) {
     result.textContent = error.message;
+    showToast(result.textContent, "error");
   } finally {
     save.disabled = false;
   }

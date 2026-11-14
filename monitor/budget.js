@@ -275,6 +275,7 @@ function downloadFile(filename, file) {
   link.download = filename;
   document.body.append(link);
   link.click();
+  showToast("Начато скачивание " + filename + ".");
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -810,6 +811,7 @@ function setup(scenario) {
     } catch (error) {
       const reason = error instanceof SyntaxError ? "Файл содержит некорректный JSON." : error.message;
       settingsStatus.textContent = `Импорт не выполнен. ${reason}`;
+      showToast(settingsStatus.textContent, "error");
     } finally {
       importButton.disabled = false;
     }
@@ -819,6 +821,7 @@ function setup(scenario) {
     resetGsm();
     settingsStatus.textContent = "";
     saveAndRender();
+    showToast("Настройки калькулятора сброшены.");
   });
   render();
   setupNamedScenarios(operators, currentSettings, applySettings, saveAndRender, scenarioComparison(operators, scenario));

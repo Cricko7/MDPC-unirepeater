@@ -241,6 +241,7 @@ function exportAlarmHistory() {
   link.download = "mdpc-alarm-history.csv";
   document.body.append(link);
   link.click();
+  showToast("Начато скачивание журнала тревог.");
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -381,7 +382,7 @@ window.addEventListener("pageshow", event => {
 elements.refresh.addEventListener("click", () => {
   nextSample();
   restartTimer();
-  elements.announcement.textContent = elements.updated.textContent;
+  showToast("Показания мониторинга обновлены.");
 });
 function showZone(id) {
   if (selectedZone === id) return;

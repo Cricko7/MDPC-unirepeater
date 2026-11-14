@@ -261,7 +261,7 @@ class Handler(BaseHTTPRequestHandler):
         if root == PUBLIC and file == PUBLIC / "index.html":
             content = content.replace(
                 b"<!-- SERVER_NAVIGATION -->",
-                '<a href="#sms-tests">Испытания SMS</a> <a href="/admin/api/">Swagger UI</a>'.encode(),
+                '<a href="#sms-tests">Испытания SMS</a>'.encode(),
                 1,
             )
         self.send_payload(200, content, media_type)

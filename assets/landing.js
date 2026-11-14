@@ -87,9 +87,11 @@ copyLink.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(url);
     shareStatus.textContent = "Ссылка скопирована.";
+    showToast(shareStatus.textContent);
     shareUrl.hidden = true;
   } catch {
     shareStatus.textContent = "Скопируйте выделенную ссылку вручную.";
+    showToast(shareStatus.textContent, "error");
     shareUrl.value = url;
     shareUrl.hidden = false;
     shareUrl.focus();
@@ -212,6 +214,7 @@ function refreshMonitoring() {
 scenarioSelect.addEventListener("change", () => {
   syncMonitoring(chooseScenario(scenarioSelect.value));
   updateShareLink();
+  showToast("Тестовый сценарий изменён.");
 });
 window.addEventListener("storage", event => {
   if (event.key === scenarioKey || event.key === snapshotKey || event.key === null) refreshMonitoring();

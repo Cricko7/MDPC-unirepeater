@@ -47,7 +47,8 @@ def check(base):
     for path in ("/", "/monitor/", "/monitor/budget.html", "/tools/mdpc-scenario.json", "/docs/mdpc-radio-layout.png"):
         assert request(path), path
     home = request("/")
-    assert b'<a href="/admin/api/">Swagger UI</a>' in home
+    assert b'href="/admin/api/"' not in home
+    assert b"assets/toasts.js" in home and request("/assets/toasts.js")
     assert b'<a href="#sms-tests">' in home and b'id="sms-tests-rows"' in home
     assert b'fetch("/api/sms-test-results"' in request("/assets/sms-test-results.js")
     assert b"datark-expert-report.pdf" not in home
@@ -82,7 +83,8 @@ def check(base):
     request("/server/app.py", 404)
     request("/admin/%2e%2e/app.py", 404, headers=auth)
     request("/admin/settings", 401)
-    assert b'id="settings"' in request("/admin/", headers=auth)
+    admin = request("/admin/", headers=auth)
+    assert b'id="settings"' in admin and b'<a href="api/">Swagger UI</a>' in admin
     settings = json.loads(request("/admin/settings", headers=auth))
     request("/admin/settings", 401, body=settings)
     request("/admin/settings", 401, body=settings, headers=swagger_auth)

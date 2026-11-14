@@ -36,6 +36,7 @@ function exportSmsTestResults(results) {
   link.href = url;
   link.download = "datark-sms-test-results.csv";
   link.click();
+  showToast("Начато скачивание CSV испытаний SMS.");
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
@@ -84,6 +85,7 @@ async function loadSmsTestResults() {
     smsExport.hidden = false;
   } catch {
     smsStatus.textContent = "Результаты испытаний сейчас недоступны. Обновите страницу, чтобы повторить запрос.";
+    showToast(smsStatus.textContent, "error");
   }
 }
 
