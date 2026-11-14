@@ -14,7 +14,7 @@ RUN mkdir -p /data /run/datark && chown 10001:10001 /data
 COPY index.html public/
 COPY assets/ public/assets/
 COPY monitor/ public/monitor/
-COPY docs/mdpc-radio-layout.png docs/mdpc-link-budget.csv public/docs/
+COPY docs/mdpc-radio-layout.png docs/mdpc-link-budget.csv docs/datark-expert-report.pdf public/docs/
 COPY tools/mdpc-scenario.json public/tools/
 COPY server/app.py .
 COPY server/admin/ admin/

@@ -136,7 +136,7 @@
 .point-list button span { color: var(--muted); font-size: .77rem; font-weight: 650; }
 .point-list button[aria-pressed="true"] span { color: var(--accent); }
 .resources { margin-block: clamp(44px, 6vw, 80px); }
-.resource-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; border-top: 1px solid var(--landing-line); }
+.resource-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); margin-top: 18px; border-top: 1px solid var(--landing-line); }
 .resource-list > a { display: grid; align-content: start; gap: 7px; padding: 15px 10px 17px 0; text-decoration: none; color: #fff; }
 .resource-list > a:hover strong { color: var(--accent); }
 .resource-list > a > span { color: var(--muted); font-size: .88rem; line-height: 1.5; }
