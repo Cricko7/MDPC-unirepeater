@@ -30,6 +30,30 @@ PASSWORD_FILE = Path(os.environ.get("DATARK_PASSWORD_FILE", "/run/datark/admin-p
 REVISION = os.environ.get("DATARK_REVISION", "local")
 SWAGGER_TOKEN_SHA256 = os.environ.get("DATARK_SWAGGER_TOKEN_SHA256", "")
 
+# Each value is the delay in milliseconds for one sent SMS. None means
+# no confirmed delivery. These fixtures never contact a modem.
+SMS_TEST_DELAYS = {
+    "off": (1110, 1240, 1280, 1170, 1350, 1220, 1190, 1410, 1260, 1310),
+    "on": (1380, 1540, 1710, 1630, 1490, None, 1820, 1570, 1650, 1430),
+}
+
+
+def sms_test_results():
+    results = []
+    for mode, delays in SMS_TEST_DELAYS.items():
+        confirmed = [delay for delay in delays if delay is not None]
+        results.append({
+            "lte_mode": mode,
+            "sent": len(delays),
+            "delivered": len(confirmed),
+            "latency_ms": {
+                "min": min(confirmed),
+                "mean": round(sum(confirmed) / len(confirmed), 2),
+                "max": max(confirmed),
+            } if confirmed else None,
+        })
+    return {"source": "synthetic", "results": results}
+
 
 def finite(value):
     return type(value) in (float, int) and math.isfinite(value)
@@ -172,6 +196,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/assets/site-defaults.json":
             self.send_settings()
+            return
+        if path == "/api/sms-test-results":
+            self.json(200, sms_test_results())
             return
         if path.startswith("/admin/api/"):
             if self.authorize_swagger() or self.authorize():

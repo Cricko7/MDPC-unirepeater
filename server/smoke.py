@@ -56,6 +56,14 @@ def check(base):
     assert b'id="swagger-ui"' in request("/admin/api/", headers=auth)
     spec = json.loads(request("/admin/api/openapi.json", headers=auth))
     assert spec["paths"]["/admin/settings"]["put"]["security"] == [{"BasicAuth": []}]
+    assert "get" in spec["paths"]["/api/sms-test-results"]
+    sms = json.loads(request("/api/sms-test-results"))
+    assert sms == {"source": "synthetic", "results": [
+        {"lte_mode": "off", "sent": 10, "delivered": 10,
+         "latency_ms": {"min": 1110, "mean": 1254, "max": 1410}},
+        {"lte_mode": "on", "sent": 10, "delivered": 9,
+         "latency_ms": {"min": 1380, "mean": 1580, "max": 1820}},
+    ]}
     swagger_auth = {"Authorization": f"Bearer {SWAGGER_TOKEN}"}
     assert b'id="swagger-ui"' in request("/admin/api/", headers=swagger_auth)
     request("/admin/api/", 401, headers={"Authorization": "Bearer wrong-token"})

@@ -130,6 +130,12 @@ jobs:
           spec = json.loads(get("/admin/api/openapi.json", 200, headers))
           if not spec.get("openapi") or "/healthz" not in spec.get("paths", {}):
               raise SystemExit("Swagger returned an invalid API description.")
+          if "get" not in spec["paths"].get("/api/sms-test-results", {}):
+              raise SystemExit("Swagger does not document the SMS results endpoint.")
+          sms = json.loads(get("/api/sms-test-results", 200))
+          if sms.get("source") != "synthetic" or {row["lte_mode"] for row in sms["results"]} != {"off", "on"}:
+              raise SystemExit("SMS results do not contain both synthetic LTE modes.")
+          print("GET /api/sms-test-results: 200, LTE off and on")
           if b"SwaggerUIBundle" not in get("/admin/api/vendor/swagger-ui-bundle.js", 200, headers):
               raise SystemExit("The Swagger UI bundle is missing or invalid.")
           print("Swagger UI, OpenAPI JSON and JavaScript bundle: 200 after login")
