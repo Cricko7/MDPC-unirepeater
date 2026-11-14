@@ -16,6 +16,21 @@ stylesheet.href = "vendor/swagger-ui.css";
 function reportLoadProblem() {
   loading.firstChild.textContent = "Swagger загружается слишком долго или недоступен. ";
 }
+
+function redactCurlCredentials(system) {
+  return {
+    wrapComponents: {
+      curl: Original => ({ request, ...props }) => {
+        const headers = request.get("headers");
+        const safeRequest = headers ? request.set("headers", headers.filter((_, name) =>
+          !["authorization", "proxy-authorization", "cookie"].includes(name.toLowerCase())
+        )) : request;
+        return system.React.createElement(Original, { ...props, request: safeRequest });
+      },
+    },
+  };
+}
+
 const loadTimeout = setTimeout(reportLoadProblem, 12000);
 bundle.addEventListener("error", () => {
   clearTimeout(loadTimeout);
@@ -27,6 +42,7 @@ bundle.addEventListener("load", () => SwaggerUIBundle({
   validatorUrl: null,
   persistAuthorization: false,
   showMutatedRequest: false,
+  plugins: [redactCurlCredentials],
   onComplete() {
     clearTimeout(loadTimeout);
     loading.hidden = true;
