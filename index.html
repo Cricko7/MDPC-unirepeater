@@ -7,10 +7,11 @@
   <meta name="description" content="Проект мобильной связи для МЦОД Датарк: схема размещения оборудования, мониторинг и расчёт LTE-покрытия.">
   <title>Датарк — мобильная связь в МЦОД</title>
   <link rel="stylesheet" href="monitor/styles.css?v=datark-design-1">
-  <link rel="stylesheet" href="assets/landing.css?v=6">
+  <link rel="stylesheet" href="assets/landing.css?v=7">
   <script src="assets/site-config.js?v=1" defer></script>
   <script src="monitor/telemetry.js?v=4" defer></script>
   <script src="assets/landing.js?v=6" defer></script>
+  <script src="assets/sms-test-results.js" defer></script>
 </head>
 <body class="landing">
   <header class="landing-header">
@@ -116,6 +117,20 @@
             <button type="button" data-point="A5" aria-pressed="false"><span>A5</span> Технологический тамбур</button>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="landing-shell sms-tests" id="sms-tests" aria-labelledby="sms-tests-title" hidden>
+      <h2 id="sms-tests-title">Испытания аварийных SMS</h2>
+      <p>Тестовые данные. Задержка рассчитана по подтверждённым доставкам.</p>
+      <p id="sms-tests-status" role="status">Загружаем результаты…</p>
+      <div class="panel table-scroll" id="sms-tests-table" role="region" aria-label="Сравнение режимов LTE" tabindex="0" hidden>
+        <table aria-label="Результаты доставки тестовых SMS">
+          <thead>
+            <tr><th scope="col">Режим LTE</th><th scope="col">Отправлено</th><th scope="col">Доставлено</th><th scope="col">Мин., мс</th><th scope="col">Средняя, мс</th><th scope="col">Макс., мс</th></tr>
+          </thead>
+          <tbody id="sms-tests-rows"></tbody>
+        </table>
       </div>
     </section>
 

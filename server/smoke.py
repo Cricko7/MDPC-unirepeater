@@ -45,7 +45,10 @@ def check(base):
 
     for path in ("/", "/monitor/", "/monitor/budget.html", "/tools/mdpc-scenario.json", "/docs/mdpc-radio-layout.png"):
         assert request(path), path
-    assert b'<a href="/admin/api/">Swagger UI</a>' in request("/")
+    home = request("/")
+    assert b'<a href="/admin/api/">Swagger UI</a>' in home
+    assert b'<a href="#sms-tests">' in home and b'id="sms-tests-rows"' in home
+    assert b'fetch("/api/sms-test-results"' in request("/assets/sms-test-results.js")
     report = "docs/datark-expert-report.pdf"
     assert f'<a href="{report}" download>'.encode() in request("/")
     assert request("/" + report) == (ROOT / report).read_bytes()
