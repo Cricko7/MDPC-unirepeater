@@ -314,6 +314,8 @@ function scenarioComparison(operators, scenario) {
   const exportButton = document.getElementById("compare-export");
   const swapButton = document.getElementById("compare-swap");
   const clearButton = document.getElementById("compare-clear");
+  const differences = document.getElementById("compare-differences");
+  const gsmSection = document.getElementById("compare-gsm-section");
   let comparison = null;
   let entries = [];
   const saved = loadBudgetSettings(comparisonKey);
@@ -335,6 +337,7 @@ function scenarioComparison(operators, scenario) {
     comparison = null;
     exportButton.disabled = true;
     swapButton.disabled = true;
+    differences.disabled = true;
     clearButton.disabled = !selects.some(select => select.value);
     if (entries.length < 2) {
       status.textContent = "Сохраните два сценария для сравнения.";
@@ -360,21 +363,35 @@ function scenarioComparison(operators, scenario) {
       status.textContent = `Сравнение недоступно. ${error.message}`;
       return;
     }
-    status.textContent = "Разница рассчитана как B − A по сохранённым параметрам.";
+    differences.disabled = false;
+    const changedOperators = new Set(operators.filter((_, index) => {
+      const [a, b] = carriers.map(side => side[index]);
+      return a.band !== b.band || a.frequency !== b.frequency || a.width !== b.width ||
+        a.power !== b.power || a.useEdge !== b.useEdge;
+    }).map(({ name }) => name));
     const headings = pair.map(({ name }, index) => `${index === 0 ? "A" : "B"} · ${name}`);
     const carrierText = ({ band, width, frequency, power, useEdge }) =>
       `${band} · ${format.format(frequency)} МГц${useEdge ? " (край диапазона)" : ""} · ${width} МГц · ${signed.format(power)} дБм`;
+    const carrierRows = operators.map(({ name }, index) =>
+      [name, ...carriers.map(side => carrierText(side[index]))]);
     comparisonTable("compare-carriers", "Параметры LTE · частота DL, ширина, мощность на входе DAS",
-      ["Оператор", ...headings], operators.map(({ name }, index) =>
-        [name, ...carriers.map(side => carrierText(side[index]))]));
+      ["Оператор", ...headings], differences.checked
+        ? carrierRows.filter(([name]) => changedOperators.has(name)) : carrierRows);
 
     const target = scenario.rsrp_target_dbm;
     const coverageText = value => `${format.format(value)} дБм · запас ${signed.format(value - target)} дБ`;
-    const coverage = operators.flatMap(({ name }, index) => scenario.zones.map(zone => {
+    const allCoverage = operators.flatMap(({ name }, index) => scenario.zones.map(zone => {
       const zoneCarriers = carriers.map(side => side[index]);
       const values = zoneCarriers.map(carrier => rsrp(carrier, zone));
       return { name, zone: zone.id, carriers: zoneCarriers, values, delta: values[1] - values[0] };
     }));
+    const coverage = differences.checked
+      ? allCoverage.filter(row => changedOperators.has(row.name) || row.delta !== 0)
+      : allCoverage;
+    status.textContent = differences.checked
+      ? (coverage.length ? `Различия в ${coverage.length} из ${allCoverage.length} строк покрытия. Разница B − A.`
+        : "Различий в параметрах LTE, RSRP и запасе нет.")
+      : "Разница рассчитана как B − A по сохранённым параметрам.";
     comparisonTable("compare-coverage", "RSRP и запас по зонам",
       ["Оператор · зона", ...headings, "Δ RSRP / Δ запаса, дБ"],
       coverage.map(({ name, zone, values, delta }) => {
@@ -382,7 +399,8 @@ function scenarioComparison(operators, scenario) {
         return [`${name} · ${zone}`, ...values.map(coverageText), `${difference} / ${difference}`];
       }));
 
-    const reports = pair.map(({ settings }, index) => {
+    gsmSection.hidden = differences.checked;
+    const reports = differences.checked ? [] : pair.map(({ settings }, index) => {
       const { band, arfcn } = settings.gsm;
       const number = Number(arfcn);
       return checkGsm(carriers[index], band, number, gsmChannel(band, number));
@@ -402,8 +420,8 @@ function scenarioComparison(operators, scenario) {
       return card;
     }));
     comparison = { headings: pair.map(({ name }) => name), coverage, reports, target };
-    exportButton.disabled = false;
-    results.hidden = false;
+    exportButton.disabled = coverage.length === 0;
+    results.hidden = coverage.length === 0;
   }
 
   exportButton.addEventListener("click", () => {
@@ -415,6 +433,7 @@ function scenarioComparison(operators, scenario) {
   }
 
   for (const select of selects) select.addEventListener("change", updateSelection);
+  differences.addEventListener("change", render);
   swapButton.addEventListener("click", () => {
     const [a, b] = selects.map(select => select.value);
     selects[0].value = b;

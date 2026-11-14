@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#121616">
   <title>Бюджет радиолинии · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="budget.css?v=scenario-comparison-1">
-  <script src="budget.js?v=scenario-comparison-5" defer></script>
+  <link rel="stylesheet" href="budget.css?v=scenario-comparison-6">
+  <script src="budget.js?v=scenario-comparison-6" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -51,6 +51,7 @@
         <label class="budget-control">Сценарий B <select id="compare-b" disabled></select></label>
         <button class="history-reset" id="compare-swap" type="button" disabled>Поменять A и B местами</button>
         <button class="history-reset" id="compare-clear" type="button" disabled>Очистить сравнение</button>
+        <label class="budget-control"><input type="checkbox" id="compare-differences" disabled> Только различия</label>
       </div>
       <p class="budget-hint" id="compare-status" role="status">Сохраните два сценария для сравнения.</p>
       <div id="compare-results" hidden>
@@ -60,8 +61,10 @@
         <div class="table-scroll" role="region" aria-label="Сравнение покрытия" tabindex="0">
           <table id="compare-coverage"></table>
         </div>
-        <div class="comparison-gsm" id="compare-gsm"></div>
-        <p class="budget-hint">Перекрытия и IM3 рассчитаны для несущих с заданными центрами. Влияние на доставку SMS проверяется на стенде.</p>
+        <div id="compare-gsm-section">
+          <div class="comparison-gsm" id="compare-gsm"></div>
+          <p class="budget-hint">Перекрытия и IM3 рассчитаны для несущих с заданными центрами. Влияние на доставку SMS проверяется на стенде.</p>
+        </div>
       </div>
     </section>
     <section class="panel" aria-labelledby="carriers-title">
