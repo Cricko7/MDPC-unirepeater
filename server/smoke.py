@@ -50,9 +50,8 @@ def check(base):
     assert b'<a href="/admin/api/">Swagger UI</a>' in home
     assert b'<a href="#sms-tests">' in home and b'id="sms-tests-rows"' in home
     assert b'fetch("/api/sms-test-results"' in request("/assets/sms-test-results.js")
-    report = "docs/datark-expert-report.pdf"
-    assert f'<a href="{report}" download>'.encode() in request("/")
-    assert request("/" + report) == (ROOT / report).read_bytes()
+    assert b"datark-expert-report.pdf" not in home
+    request("/docs/datark-expert-report.pdf", 404)
     request("/admin/", 401)
     request("/admin/admin.js", 401)
     request("/admin/api/", 401)

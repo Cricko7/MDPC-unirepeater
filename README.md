@@ -13,8 +13,6 @@
 
 [Открыть сайт Датарк на VPS](https://72.56.14.198/)
 
-[PDF-отчёт для эксперта](docs/datark-expert-report.pdf)
-
 <details>
 <summary>Три скриншота сайта на VPS</summary>
 
@@ -37,8 +35,6 @@
 ## Проверка API на VPS
 
 Для проверки публичных запросов через [Swagger Editor](https://editor.swagger.io/) скачайте [спецификацию OpenAPI](docs/datark-public-openapi.json) и импортируйте её через **File → Import file**. Разверните `GET`, затем нажмите **Try it out → Execute**. В спецификацию входят состояние сервера, публичные стартовые настройки и тестовые результаты SMS.
-
-Откройте [Swagger UI на VPS](https://72.56.14.198/admin/api/) и войдите с логином и паролем админ-панели. Разверните нужный запрос, нажмите **Try it out → Execute** и проверьте HTTP-статус и JSON в разделе **Server response**.
 
 Эти запросы можно выполнять на VPS без изменения настроек:
 
