@@ -47,6 +47,8 @@ def check(base):
     for path in ("/", "/monitor/", "/monitor/budget.html", "/tools/mdpc-scenario.json", "/docs/mdpc-radio-layout.png"):
         assert request(path), path
     home = request("/")
+    for page in (home, request("/monitor/")):
+        assert b'<meta name="datark-telemetry" content="/api/telemetry">' in page
     assert b'href="/admin/api/"' not in home
     assert b"assets/toasts.js" in home and request("/assets/toasts.js")
     assert b'<a href="#sms-tests">' in home and b'id="sms-tests-rows"' in home
@@ -61,6 +63,7 @@ def check(base):
     spec = json.loads(request("/admin/api/openapi.json", headers=auth))
     assert spec["paths"]["/admin/settings"]["put"]["security"] == [{"BasicAuth": []}]
     assert "get" in spec["paths"]["/api/sms-test-results"]
+    assert "get" in spec["paths"]["/api/telemetry"]
     editor = "https://editor.swagger.io"
     for path in ("/healthz", "/assets/site-defaults.json", "/api/sms-test-results"):
         request(path, headers={"Origin": editor}, cors_origin=editor)
@@ -68,6 +71,18 @@ def check(base):
     request("/admin/settings", headers={**auth, "Origin": editor})
     request("/api/sms-test-results", headers={"Origin": "https://example.org"})
     sms = json.loads(request("/api/sms-test-results"))
+    request("/api/telemetry?scenario=invalid", 400)
+    normal = json.loads(request("/api/telemetry?scenario=normal", headers={"Origin": "https://editor.swagger.io"},
+                                cors_origin="https://editor.swagger.io"))
+    assert normal["source"] == "synthetic" and normal["online"] and not normal["alarms"]
+    assert [zone["id"] for zone in normal["zones"]] == ["A1", "A2", "A3", "A4", "A5"]
+    assert len(normal["samples"]) == 8 and normal["time"] == normal["samples"][-1]["time"]
+    for zone in normal["zones"]:
+        assert zone["status"] == "good" and zone["reading"] == normal["samples"][-1]["zones"][zone["id"]]
+    mixed = json.loads(request("/api/telemetry?scenario=mixed"))
+    assert {(alarm["sourceId"], alarm["type"]) for alarm in mixed["alarms"]} == {
+        ("A2", "low-signal"), ("A5", "no-telemetry"),
+    }
     assert sms == {"source": "synthetic", "results": [
         {"lte_mode": "off", "sent": 10, "delivered": 10,
          "latency_ms": {"min": 1110, "mean": 1254, "max": 1410}},
@@ -96,6 +111,10 @@ def check(base):
     settings["calculator"]["gsm"] = {"band": "900", "arfcn": 62}
     assert json.loads(request("/admin/settings", body=settings, headers=write)) == settings
     assert json.loads(request("/assets/site-defaults.json")) == settings
+    offline = json.loads(request("/api/telemetry"))
+    assert offline["scenario"] == "offline" and not offline["online"]
+    assert {"sourceId": "R1", "type": "rf-off"} in offline["alarms"]
+    assert all(zone["reading"] is None for zone in offline["zones"])
     settings["calculator"]["operators"][0]["dl_mhz"] = 100
     request("/admin/settings", 400, body=settings, headers=write)
     assert "dl_mhz" not in json.loads(request("/assets/site-defaults.json"))["calculator"]["operators"][0]

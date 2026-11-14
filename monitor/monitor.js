@@ -1,7 +1,7 @@
 "use strict";
 
 const {
-  interval, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
+  interval, serverUrl, watchTelemetry, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
   alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot,
   historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario, setDefaultScenario,
   selectedZoneKey, readSelectedZone, saveSelectedZone,
@@ -15,7 +15,7 @@ const elements = Object.fromEntries([
   "scenario", "refresh", "alarm-notifications", "alarm-notification-level", "alarm-notification-zone",
   "alarm-notification-event",
   "summary", "zones", "chart", "trend-title",
-  "alarms", "alarm-count", "updated", "announcement",
+  "alarms", "alarm-count", "updated", "announcement", "telemetry-source",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
   "history-status", "history-from", "history-to", "history-sort", "history-filters", "history-reset",
@@ -86,6 +86,7 @@ let samples = [];
 let sequence = 0;
 let lastSeen = new Map();
 let timer;
+let latestSnapshot;
 
 function alarmKey({ sourceId, type }) {
   return `${sourceId}/${type}`;
@@ -139,24 +140,20 @@ function tile(title, value, detail, tone = "", unit = "") {
   return `<div class="tile"><span>${title}</span><strong class="${tone}">${value}${unit ? ` <small>${unit}</small>` : ""}</strong><small>${detail}</small></div>`;
 }
 
-function renderSummary(states) {
-  const online = scenario !== "offline";
-  const drift = variation[(sequence - 1) % variation.length];
+function renderSummary(states, { online, donor }) {
   const healthy = states.filter(state => state.status === "good").length;
   elements.summary.innerHTML = [
     tile("Репитер R1", online ? "В работе" : "Отключён", "RF · Comba mPICO", online ? "good" : "critical"),
-    tile("RSRP донора", formatValue(-78 + drift), "Наружный зонд M1", "", "дБм"),
-    tile("SINR донора", formatValue(17 + drift), "Наружный зонд M1", "", "дБ"),
+    tile("RSRP донора", formatValue(donor.rsrp), "Наружный зонд M1", "", "дБм"),
+    tile("SINR донора", formatValue(donor.sinr), "Наружный зонд M1", "", "дБ"),
     tile("Зоны в норме", `${healthy} из ${zones.length}`, "По последним отсчётам", healthy === zones.length ? "good" : "warning"),
   ].join("");
 }
 
 function renderZones(states) {
   const focusedZone = elements.zones.contains(document.activeElement) ? document.activeElement.dataset.zone : null;
-  const latest = samples.at(-1);
-  elements.zones.innerHTML = states.map(({ zone, status }) => {
+  elements.zones.innerHTML = states.map(({ zone, status, reading }) => {
     const selected = zone.id === selectedZone;
-    const reading = latest.zones[zone.id];
     const values = Object.entries(metrics).map(([key, metric]) => {
       const value = reading?.[key];
       const color = value < metric.threshold ? "warning" : "";
@@ -313,8 +310,7 @@ function exportAlarmHistory() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function renderFloor(states, alarms) {
-  const online = scenario !== "offline";
+function renderFloor(states, alarms, online) {
   const repeaterMarker = elements["repeater-marker"];
   repeaterMarker.dataset.status = online ? "good" : "critical";
   repeaterMarker.title = `Репитер R1 · ${online ? "В работе" : "Отключён"}`;
@@ -328,8 +324,7 @@ function renderFloor(states, alarms) {
     marker.setAttribute("aria-pressed", String(zone.id === selectedZone));
   }
 
-  const { zone, status } = states.find(state => state.zone.id === selectedZone);
-  const reading = samples.at(-1).zones[zone.id];
+  const { zone, status, reading } = states.find(state => state.zone.id === selectedZone);
   const values = Object.entries(metrics).map(([key, { label, unit }]) => `
     <div><dt>${label}</dt><dd>${formatValue(reading?.[key])}${reading ? ` <small>${unit}</small>` : ""}</dd></div>`
   ).join("");
@@ -384,21 +379,24 @@ function renderChart() {
 }
 
 function render({ recordAlarms = false, scenarioChanged = false, notify = true } = {}) {
-  const snapshot = createSnapshot(scenario, samples, lastSeen);
-  const states = zones.map((zone, index) => ({ zone, status: snapshot.zones[index].status }));
+  const snapshot = latestSnapshot;
+  if (!snapshot) return false;
+  const states = zones.map(zone => ({ zone, ...snapshot.zones.find(item => item.id === zone.id) }));
   const alarms = snapshot.alarms.map(({ sourceId, type }) => alarmDetails(sourceId, type));
-  renderSummary(states);
-  renderFloor(states, alarms);
+  renderSummary(states, snapshot);
+  renderFloor(states, alarms, snapshot.online);
   renderZones(states);
   renderAlarms(alarms);
   renderChart();
-  const time = new Date(samples.at(-1).time);
+  const time = new Date(snapshot.time);
   let events = [];
   if (recordAlarms) {
-    try {
-      localStorage.setItem(snapshotKey, JSON.stringify(snapshot));
-    } catch {
-      // Monitoring still works without browser storage.
+    if (!serverUrl) {
+      try {
+        localStorage.setItem(snapshotKey, JSON.stringify(snapshot));
+      } catch {
+        // Monitoring still works without browser storage.
+      }
     }
     events = updateAlarmHistory(alarms, time.getTime());
     if (events.length || scenarioChanged) saveAlarmHistory();
@@ -409,17 +407,23 @@ function render({ recordAlarms = false, scenarioChanged = false, notify = true }
   return notify && alarmNotifications.checked && showAlarmEvents(events);
 }
 
+function renderLocalSample(options) {
+  const drift = variation[(sequence - 1) % variation.length];
+  latestSnapshot = { ...createSnapshot(scenario, samples, lastSeen), donor: { rsrp: -78 + drift, sinr: 17 + drift } };
+  return render(options);
+}
+
 function reset(notify = true) {
   ({ samples, lastSeen } = seedSamples(scenario, Date.now()));
   sequence = sampleCount;
-  render({ recordAlarms: true, scenarioChanged: true, notify });
+  renderLocalSample({ recordAlarms: true, scenarioChanged: true, notify });
   restartTimer();
 }
 
 function nextSample() {
   samples = [...samples.slice(1), makeSample(sequence, Date.now(), scenario, lastSeen)];
   sequence += 1;
-  return render({ recordAlarms: true });
+  return renderLocalSample({ recordAlarms: true });
 }
 
 function restartTimer() {
@@ -435,19 +439,48 @@ function applyScenario({ id, followsDefault }) {
   elements.announcement.textContent = "Тестовый сценарий изменён.";
 }
 
+const refreshServer = serverUrl && watchTelemetry((snapshot, choice) => {
+  const notify = Boolean(latestSnapshot);
+  latestSnapshot = snapshot;
+  samples = snapshot.samples;
+  elements.scenario.value = choice.followsDefault ? "server" : choice.id;
+  elements["telemetry-source"].textContent = "Тестовые данные с сервера · каждые 5 с";
+  elements.refresh.disabled = false;
+  return { notified: render({ recordAlarms: true, notify }) };
+}, () => {
+  elements["telemetry-source"].textContent = latestSnapshot
+    ? "Сервер недоступен · показаны последние полученные данные" : "Сервер недоступен · телеметрия не получена";
+  elements.refresh.disabled = false;
+});
+
+function updateScenario(choice = readScenario()) {
+  if (refreshServer) {
+    elements.scenario.value = choice.followsDefault ? "server" : choice.id;
+    return refreshServer(choice);
+  }
+  applyScenario(choice);
+}
+
 elements.scenario.addEventListener("change", () => {
-  applyScenario(chooseScenario(elements.scenario.value));
+  updateScenario(chooseScenario(elements.scenario.value));
 });
 window.addEventListener("storage", event => {
-  if (event.key === scenarioKey || event.key === null) applyScenario(readScenario());
+  if (event.key === scenarioKey || event.key === null) updateScenario();
   if (event.key === selectedZoneKey || event.key === null) syncSelectedZone();
 });
 window.addEventListener("pageshow", event => {
   if (!event.persisted) return;
-  applyScenario(readScenario());
+  updateScenario();
   syncSelectedZone();
 });
-elements.refresh.addEventListener("click", () => {
+elements.refresh.addEventListener("click", async () => {
+  if (refreshServer) {
+    const result = await refreshServer();
+    if (result && !result.notified && document.querySelector('.toast-notice[data-tone="alarm"]')?.hidden !== false) {
+      showToast("Показания мониторинга получены с сервера.");
+    }
+    return;
+  }
   const notified = nextSample();
   restartTimer();
   if (!notified && document.querySelector('.toast-notice[data-tone="alarm"]')?.hidden !== false) {
@@ -527,7 +560,12 @@ for (const button of metricButtons) {
     renderChart();
   });
 }
-siteDefaults.then(defaults => {
+if (refreshServer) {
+  elements["telemetry-source"].textContent = "Загрузка телеметрии с сервера…";
+  elements.scenario.disabled = false;
+  new ResizeObserver(renderChart).observe(elements.chart);
+  updateScenario();
+} else siteDefaults.then(defaults => {
   setDefaultScenario(defaults.scenario);
   const choice = readScenario();
   scenario = choice.id;

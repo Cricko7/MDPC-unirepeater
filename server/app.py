@@ -8,9 +8,10 @@ import mimetypes
 import os
 import secrets
 import tempfile
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 ROOT = Path(os.environ.get("DATARK_ROOT", "/app"))
 PUBLIC = ROOT / "public"
@@ -30,7 +31,40 @@ PASSWORD_FILE = Path(os.environ.get("DATARK_PASSWORD_FILE", "/run/datark/admin-p
 REVISION = os.environ.get("DATARK_REVISION", "local")
 SWAGGER_TOKEN_SHA256 = os.environ.get("DATARK_SWAGGER_TOKEN_SHA256", "")
 EDITOR_ORIGINS = {"https://editor.swagger.io", "https://jdegre.github.io"}
-EDITOR_PATHS = {"/healthz", "/assets/site-defaults.json", "/api/sms-test-results"}
+EDITOR_PATHS = {"/healthz", "/assets/site-defaults.json", "/api/sms-test-results", "/api/telemetry"}
+
+TELEMETRY_INTERVAL_MS = 5000
+ZONE_BASELINES = ((-89, 15), (-91, 12), (-85, 18), (-93, 10), (-82, 20))
+TELEMETRY_DRIFT = (0, 2, 1, -1, -2, 1, 0, -1)
+
+
+def telemetry(scenario, now_ms):
+    slot = now_ms // TELEMETRY_INTERVAL_MS
+    online = scenario != "offline"
+    zones = []
+    alarms = [] if online else [{"sourceId": "R1", "type": "rf-off"}]
+    samples = [{"time": tick * TELEMETRY_INTERVAL_MS, "zones": {}} for tick in range(slot - 7, slot + 1)]
+    for number, (rsrp, sinr) in enumerate(ZONE_BASELINES, 1):
+        zone_id = f"A{number}"
+        status = "good"
+        if not online or (scenario == "mixed" and zone_id == "A5"):
+            status = "critical"
+            alarms.append({"sourceId": zone_id, "type": "no-telemetry"})
+        elif scenario == "mixed" and zone_id == "A2":
+            rsrp, sinr = -105, 2
+            status = "warning"
+            alarms.append({"sourceId": zone_id, "type": "low-signal"})
+        for sample in samples:
+            drift = TELEMETRY_DRIFT[(sample["time"] // TELEMETRY_INTERVAL_MS + number) % len(TELEMETRY_DRIFT)]
+            sample["zones"][zone_id] = None if status == "critical" else {"rsrp": rsrp + drift, "sinr": sinr + drift}
+        zones.append({"id": zone_id, "status": status, "reading": samples[-1]["zones"][zone_id]})
+    drift = TELEMETRY_DRIFT[slot % len(TELEMETRY_DRIFT)]
+    return {
+        "source": "synthetic", "time": samples[-1]["time"], "scenario": scenario,
+        "online": online, "donor": {"rsrp": -78 + drift, "sinr": 17 + drift},
+        "zones": zones, "samples": samples,
+        "alarms": sorted(alarms, key=lambda alarm: alarm["type"] == "low-signal"),
+    }
 
 # Each value is the delay in milliseconds for one sent SMS. None means
 # no confirmed delivery. These fixtures never contact a modem.
@@ -207,6 +241,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/sms-test-results":
             self.json(200, sms_test_results())
             return
+        if path == "/api/telemetry":
+            self.send_telemetry()
+            return
         if path.startswith("/admin/api/"):
             if self.authorize_swagger() or self.authorize():
                 self.serve_file(ADMIN / "api", path.removeprefix("/admin/api/"))
@@ -233,6 +270,22 @@ class Handler(BaseHTTPRequestHandler):
             return
         self.json(200, settings)
 
+    def send_telemetry(self):
+        params = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+        requested = params.get("scenario")
+        if requested is not None and (len(requested) != 1 or requested[0] not in ("mixed", "normal", "offline")):
+            self.json(400, {"error": "Выберите тестовый сценарий."})
+            return
+        try:
+            scenario = requested[0] if requested else load_settings()["scenario"]
+        except (OSError, ValueError, KeyError, TypeError):
+            self.json(503, {"error": "Настройки сервера недоступны."})
+            return
+        if scenario not in ("mixed", "normal", "offline"):
+            self.json(503, {"error": "Настройки сервера недоступны."})
+            return
+        self.json(200, telemetry(scenario, time.time_ns() // 1_000_000))
+
     def serve_file(self, root, name):
         try:
             file = (root / name).resolve()
@@ -258,6 +311,8 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             self.json(404, {"error": "Страница не найдена."})
             return
+        if root == PUBLIC and file in (PUBLIC / "index.html", PUBLIC / "monitor/index.html"):
+            content = content.replace(b"<!-- SERVER_TELEMETRY -->", b'<meta name="datark-telemetry" content="/api/telemetry">', 1)
         if root == PUBLIC and file == PUBLIC / "index.html":
             content = content.replace(
                 b"<!-- SERVER_NAVIGATION -->",

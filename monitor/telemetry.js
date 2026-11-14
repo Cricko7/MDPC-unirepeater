@@ -2,6 +2,8 @@
 
 const monitoringTelemetry = (() => {
   const interval = 15_000;
+  const serverInterval = 5000;
+  const serverUrl = document.querySelector('meta[name="datark-telemetry"]')?.content;
   const sampleCount = 8;
   const metrics = {
     rsrp: { label: "RSRP", unit: "дБм", threshold: -100, ticks: [-70, -85, -100, -115] },
@@ -178,8 +180,36 @@ const monitoringTelemetry = (() => {
     return { ...createSnapshot(scenario, samples, lastSeen), time: null };
   }
 
+  function watchTelemetry(render, reportError) {
+    let pending;
+    async function refresh(choice = readScenario()) {
+      const url = new URL(serverUrl, location.href);
+      if (!choice.followsDefault) url.searchParams.set("scenario", choice.id);
+      if (pending?.url === url.href) return;
+      pending?.controller.abort();
+      const controller = new AbortController();
+      pending = { url: url.href, controller };
+      try {
+        const response = await fetch(url, {
+          cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]),
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        const snapshot = await response.json();
+        if (!controller.signal.aborted) return render(snapshot, choice);
+      } catch {
+        if (!controller.signal.aborted) reportError();
+      } finally {
+        if (pending?.controller === controller) pending = undefined;
+      }
+    }
+    const refreshVisible = () => { if (!document.hidden) refresh(); };
+    setInterval(refreshVisible, serverInterval);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return refresh;
+  }
+
   return {
-    interval, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
+    interval, serverInterval, serverUrl, watchTelemetry, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
     alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot,
     historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot, setDefaultScenario,
     selectedZoneKey, readSelectedZone, saveSelectedZone,

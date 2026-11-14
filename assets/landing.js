@@ -29,7 +29,7 @@ const points = {
 const {
   statusLabels, severityLabels, alarmDetails, alarmTypes, formatValue, metrics,
   snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot, setDefaultScenario,
-  selectedZoneKey, readSelectedZone, saveSelectedZone,
+  selectedZoneKey, readSelectedZone, saveSelectedZone, serverUrl, watchTelemetry,
 } = monitoringTelemetry;
 const linkParams = new URLSearchParams(location.search);
 const linkedPoint = linkParams.get("zone");
@@ -107,9 +107,9 @@ function showPointTelemetry() {
   pointStatus.lastElementChild.textContent = repeater
     ? (snapshot.online ? "В работе" : "Отключён")
     : (statusLabels[status] || "Нет данных");
-  pointMetrics.hidden = repeater;
+  pointMetrics.hidden = repeater && !snapshot.donor;
   for (const [metric, element] of Object.entries(metricValues)) {
-    const value = zone?.reading?.[metric];
+    const value = repeater ? snapshot.donor?.[metric] : zone?.reading?.[metric];
     element.textContent = Number.isFinite(value) ? formatValue(value) + " " + metrics[metric].unit : "—";
   }
 
@@ -129,8 +129,8 @@ function showPointTelemetry() {
   noAlarms.hidden = alarms.length > 0;
 }
 
-function syncMonitoring(choice = readScenario()) {
-  snapshot = readSnapshot(choice);
+function syncMonitoring(choice = readScenario(), data = readSnapshot(choice)) {
+  snapshot = data;
   scenarioSelect.value = choice.followsDefault ? "server" : snapshot.scenario;
   for (const marker of map.querySelectorAll("[data-point]")) {
     const id = marker.dataset.point;
@@ -142,9 +142,8 @@ function syncMonitoring(choice = readScenario()) {
     marker.title = id + " · " + points[id].title + " · " + label;
     marker.setAttribute("aria-label", marker.title);
   }
-  dataCaption.textContent = snapshot.time === null
-    ? "Тестовые данные"
-    : "Тестовые данные · " + timeFormat.format(snapshot.time);
+  const source = serverUrl ? "Тестовые данные с сервера" : "Локальная симуляция";
+  dataCaption.textContent = snapshot.time === null ? source : source + " · " + timeFormat.format(snapshot.time);
   showPointTelemetry();
 }
 
@@ -204,7 +203,17 @@ function changeZoom(step) {
 zoomOut.addEventListener("click", () => changeZoom(-1));
 zoomIn.addEventListener("click", () => changeZoom(1));
 
+const refreshServer = serverUrl && watchTelemetry((data, choice) => {
+  const previousScenario = snapshot?.scenario;
+  syncMonitoring(choice, data);
+  if (snapshot.scenario !== previousScenario) updateShareLink();
+}, () => {
+  dataCaption.textContent = snapshot
+    ? "Сервер недоступен · показаны последние полученные данные" : "Сервер недоступен · телеметрия не получена";
+});
+
 function refreshMonitoring() {
+  if (refreshServer) return refreshServer();
   if (!snapshot) return;
   const previousScenario = snapshot.scenario;
   syncMonitoring();
@@ -212,12 +221,17 @@ function refreshMonitoring() {
 }
 
 scenarioSelect.addEventListener("change", () => {
-  syncMonitoring(chooseScenario(scenarioSelect.value));
+  const choice = chooseScenario(scenarioSelect.value);
+  if (refreshServer) {
+    refreshServer(choice);
+    return;
+  }
+  syncMonitoring(choice);
   updateShareLink();
   showToast("Тестовый сценарий изменён.");
 });
 window.addEventListener("storage", event => {
-  if (event.key === scenarioKey || event.key === snapshotKey || event.key === null) refreshMonitoring();
+  if (event.key === scenarioKey || (!serverUrl && event.key === snapshotKey) || event.key === null) refreshMonitoring();
   if (event.key === selectedZoneKey || event.key === null) syncSelectedZone();
 });
 window.addEventListener("pageshow", event => {
@@ -226,7 +240,7 @@ window.addEventListener("pageshow", event => {
   syncSelectedZone();
 });
 
-siteDefaults.then(defaults => {
+function initializeLanding(defaults) {
   setDefaultScenario(defaults.scenario);
   const sharedScenario = ["mixed", "normal", "offline"].includes(linkedScenario)
     ? chooseScenario(linkedScenario) : undefined;
@@ -237,11 +251,19 @@ siteDefaults.then(defaults => {
       saveSelectedZone(sharedZone);
     }
   }
-  syncMonitoring(sharedScenario);
   showPoint(selectedPoint);
   scenarioSelect.disabled = false;
+  if (refreshServer) {
+    dataCaption.textContent = "Загрузка телеметрии с сервера…";
+    refreshServer(sharedScenario);
+    return;
+  }
+  syncMonitoring(sharedScenario);
   watchSiteDefaults(defaults, settings => {
     setDefaultScenario(settings.scenario);
     refreshMonitoring();
   });
-});
+}
+
+if (refreshServer) initializeLanding({});
+else siteDefaults.then(initializeLanding);

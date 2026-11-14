@@ -136,6 +136,12 @@ jobs:
           if sms.get("source") != "synthetic" or {row["lte_mode"] for row in sms["results"]} != {"off", "on"}:
               raise SystemExit("SMS results do not contain both synthetic LTE modes.")
           print("GET /api/sms-test-results: 200, LTE off and on")
+          if "get" not in spec["paths"].get("/api/telemetry", {}):
+              raise RuntimeError("Swagger does not list GET /api/telemetry")
+          telemetry = json.loads(get("/api/telemetry?scenario=normal", 200))
+          if telemetry.get("source") != "synthetic" or len(telemetry.get("zones", [])) != 5:
+              raise RuntimeError("Unexpected telemetry response")
+          print("GET /api/telemetry: 200, synthetic readings for five zones")
           if b"SwaggerUIBundle" not in get("/admin/api/vendor/swagger-ui-bundle.js", 200, headers):
               raise SystemExit("The Swagger UI bundle is missing or invalid.")
           print("Swagger UI, OpenAPI JSON and JavaScript bundle: 200 after login")

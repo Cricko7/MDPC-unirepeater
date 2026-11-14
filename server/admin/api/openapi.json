@@ -11,6 +11,45 @@
     }
   ],
   "paths": {
+    "/api/telemetry": {
+      "get": {
+        "operationId": "getTelemetry",
+        "summary": "Тестовая телеметрия репитера и пяти зон",
+        "description": "Сервер формирует синтетические отсчёты каждые пять секунд. Если сценарий не указан, применяется настройка сайта.",
+        "parameters": [
+          {
+            "name": "scenario",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "mixed",
+                "normal",
+                "offline"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Текущие значения, восемь отсчётов и активные тревоги",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Telemetry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Недопустимый сценарий"
+          },
+          "503": {
+            "description": "Настройки сервера недоступны"
+          }
+        }
+      }
+    },
     "/healthz": {
       "get": {
         "summary": "Состояние и ревизия сервера",
@@ -414,6 +453,186 @@
       }
     },
     "schemas": {
+    "Telemetry": {
+      "type": "object",
+      "required": [
+        "source",
+        "time",
+        "scenario",
+        "online",
+        "donor",
+        "zones",
+        "samples",
+        "alarms"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "synthetic"
+          ]
+        },
+        "time": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Время последнего отсчёта в миллисекундах Unix."
+        },
+        "scenario": {
+          "type": "string",
+          "enum": [
+            "mixed",
+            "normal",
+            "offline"
+          ]
+        },
+        "online": {
+          "type": "boolean",
+          "description": "Состояние репитера R1."
+        },
+        "donor": {
+          "$ref": "#/components/schemas/RadioReading"
+        },
+        "zones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "status",
+              "reading"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "enum": [
+                  "A1",
+                  "A2",
+                  "A3",
+                  "A4",
+                  "A5"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "good",
+                  "warning",
+                  "critical"
+                ]
+              },
+              "reading": {
+                "$ref": "#/components/schemas/ZoneReading"
+              }
+            }
+          },
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "samples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "time",
+              "zones"
+            ],
+            "properties": {
+              "time": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "zones": {
+                "type": "object",
+                "required": [
+                  "A1",
+                  "A2",
+                  "A3",
+                  "A4",
+                  "A5"
+                ],
+                "properties": {
+                  "A1": {
+                    "$ref": "#/components/schemas/ZoneReading"
+                  },
+                  "A2": {
+                    "$ref": "#/components/schemas/ZoneReading"
+                  },
+                  "A3": {
+                    "$ref": "#/components/schemas/ZoneReading"
+                  },
+                  "A4": {
+                    "$ref": "#/components/schemas/ZoneReading"
+                  },
+                  "A5": {
+                    "$ref": "#/components/schemas/ZoneReading"
+                  }
+                }
+              }
+            }
+          },
+          "minItems": 8,
+          "maxItems": 8
+        },
+        "alarms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "sourceId",
+              "type"
+            ],
+            "properties": {
+              "sourceId": {
+                "type": "string",
+                "enum": [
+                  "R1",
+                  "A1",
+                  "A2",
+                  "A3",
+                  "A4",
+                  "A5"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "rf-off",
+                  "low-signal",
+                  "no-telemetry"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "RadioReading": {
+      "type": "object",
+      "required": [
+        "rsrp",
+        "sinr"
+      ],
+      "properties": {
+        "rsrp": {
+          "type": "number",
+          "description": "RSRP в дБм."
+        },
+        "sinr": {
+          "type": "number",
+          "description": "SINR в дБ."
+        }
+      }
+    },
+    "ZoneReading": {
+      "anyOf": [
+        {
+          "$ref": "#/components/schemas/RadioReading"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
       "Health": {
         "type": "object",
         "required": [
