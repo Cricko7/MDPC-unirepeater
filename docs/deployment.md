@@ -41,7 +41,7 @@
 
 ## Проверка API через Swagger UI
 
-Откройте [форму входа в Swagger на VPS](https://72.56.14.198/admin/login?next=swagger). Логин админ-панели — `admin`. Пароль хранится в локальной памятке владельца. Разверните запрос и нажмите **Try it out → Execute**. Начните с `GET /healthz` для проверки статуса и ревизии, затем проверьте `GET /assets/site-defaults.json` или `GET /admin/settings`.
+Откройте [форму входа в Swagger на VPS](https://72.56.14.198/admin/login?next=swagger). Логин админ-панели — `admin`. Пароль: `1fd0cc38ff725a2540b4467850542fb7fa8df251ac3725065f2371c8f35a7667`. Разверните запрос и нажмите **Try it out → Execute**. Начните с `GET /healthz` для проверки статуса и ревизии, затем проверьте `GET /assets/site-defaults.json` или `GET /admin/settings`.
 
 Для записи скопируйте текущий JSON из `GET /admin/settings`, измените нужные поля и отправьте его через `PUT /admin/settings`. PUT заменяет общие настройки и запрашивает подтверждение в браузере. OpenAPI JSON доступен по `/admin/api/openapi.json`.
 
