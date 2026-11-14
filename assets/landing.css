@@ -101,11 +101,9 @@
 }
 .drawing-scroll .floor-map { width: var(--drawing-width, 100%); }
 .landing .map-marker { background: #202430; color: #fff; min-width: 38px; min-height: 38px; }
-.landing .map-marker[aria-pressed="true"] { background: #f78361; color: #171b27; }
-.landing .map-marker:focus-visible { outline: 3px solid #f54b64; }
 .landing .repeater-point { border-radius: 6px; }
 .point-panel { border-left: 1px solid var(--landing-line); display: flex; flex-direction: column; }
-.point-details { padding: 22px 17px; min-height: 226px; border-bottom: 1px solid var(--line); }
+.point-details { padding: 22px 17px; min-height: 155px; border-bottom: 1px solid var(--line); }
 .point-details > span { color: var(--accent); font-size: .83rem; font-weight: 650; }
 .point-details h3 { font-size: 1.38rem; line-height: 1.08; margin-block: 9px; }
 .point-details p { font-size: .88rem; }
@@ -168,3 +166,20 @@
   .resource-list { grid-template-columns: 1fr; }
   .resource-list > a + a { border-top: 1px solid var(--line); }
 }
+.drawing-legend { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.landing .map-marker[data-status="good"] { background: var(--green); color: #171b27; }
+.landing .map-marker[data-status="warning"] { background: var(--amber); color: #171b27; }
+.landing .map-marker[data-status="critical"] { background: var(--red); color: #171b27; }
+.landing .map-marker[aria-pressed="true"] { outline: 3px solid #202430; outline-offset: 1px; }
+.landing .map-marker:focus-visible { outline: 3px solid #202430; outline-offset: 4px; }
+.point-telemetry { padding: 14px 17px 17px; border-bottom: 1px solid var(--line); }
+.point-telemetry p { font-size: .82rem; }
+.point-data-caption { margin-bottom: 7px; font-variant-numeric: tabular-nums; }
+.point-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
+.point-metrics[hidden] { display: none; }
+.point-metrics div { background: #202430; padding: 7px; }
+.point-metrics dt { color: var(--muted); font-size: .75rem; }
+.point-metrics dd { margin: 4px 0 0; font-size: .9rem; font-weight: 650; }
+.point-telemetry h4 { margin: 12px 0 4px; font-size: .85rem; }
+.point-telemetry ul { margin: 0; padding: 0; list-style: none; font-size: .82rem; }
+.point-telemetry li + li { margin-top: 7px; }

@@ -7,8 +7,9 @@
   <meta name="description" content="Проект мобильной связи для МЦОД Датарк: схема размещения оборудования, мониторинг и расчёт LTE-покрытия.">
   <title>Датарк — мобильная связь в МЦОД</title>
   <link rel="stylesheet" href="monitor/styles.css?v=datark-design-1">
-  <link rel="stylesheet" href="assets/landing.css?v=1">
-  <script src="assets/landing.js?v=1" defer></script>
+  <link rel="stylesheet" href="assets/landing.css?v=2">
+  <script src="monitor/telemetry.js?v=1" defer></script>
+  <script src="assets/landing.js?v=2" defer></script>
 </head>
 <body class="landing">
   <header class="landing-header">
@@ -68,6 +69,11 @@
               <button class="map-marker repeater-point" type="button" data-point="R1" aria-label="R1, LTE-репитер" aria-pressed="true" style="--x: 84.4%; --y: 22.5%">R1</button>
             </div>
           </div>
+          <div class="drawing-legend" aria-label="Цвета статусов">
+            <span class="status good"><i aria-hidden="true"></i>Норма</span>
+            <span class="status warning"><i aria-hidden="true"></i>Деградация</span>
+            <span class="status critical"><i aria-hidden="true"></i>Нет данных / отключён</span>
+          </div>
         </div>
         <div class="point-panel">
           <div class="point-details" aria-live="polite">
@@ -75,6 +81,17 @@
             <h3 id="point-title">LTE-репитер</h3>
             <p id="point-description">В технологическом тамбуре. Принимает сигнал от наружной антенны и распределяет его по пяти внутренним антеннам.</p>
           </div>
+          <section class="point-telemetry" aria-label="Показания мониторинга">
+            <p class="point-data-caption" id="point-data-caption"></p>
+            <span class="status" id="point-status"><i aria-hidden="true"></i><span></span></span>
+            <dl class="point-metrics" id="point-metrics">
+              <div><dt>RSRP</dt><dd id="point-rsrp">—</dd></div>
+              <div><dt>SINR</dt><dd id="point-sinr">—</dd></div>
+            </dl>
+            <h4>Активные тревоги</h4>
+            <p id="point-no-alarms">Активных тревог нет.</p>
+            <ul id="point-alarms" hidden></ul>
+          </section>
           <div class="point-list" role="group" aria-label="Оборудование на плане">
             <button type="button" data-point="R1" aria-pressed="true"><span>R1</span> Репитер</button>
             <button type="button" data-point="A1" aria-pressed="false"><span>A1</span> Верхний проход</button>

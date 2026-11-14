@@ -26,6 +26,7 @@ const points = {
   },
 };
 
+const { statusLabels, severityLabels, alarmDetails, alarmTypes, formatValue, metrics, snapshotKey, readSnapshot } = monitoringTelemetry;
 const pointButtons = document.querySelectorAll("[data-point]");
 const pointType = document.querySelector("#point-type");
 const pointTitle = document.querySelector("#point-title");
@@ -35,8 +36,71 @@ const map = document.querySelector("#landing-map");
 const zoomOut = document.querySelector("#zoom-out");
 const zoomIn = document.querySelector("#zoom-in");
 const zoomValue = document.querySelector("#zoom-value");
+const pointStatus = document.querySelector("#point-status");
+const pointMetrics = document.querySelector("#point-metrics");
+const metricValues = {
+  rsrp: document.querySelector("#point-rsrp"),
+  sinr: document.querySelector("#point-sinr"),
+};
+const pointAlarms = document.querySelector("#point-alarms");
+const noAlarms = document.querySelector("#point-no-alarms");
+const dataCaption = document.querySelector("#point-data-caption");
+const timeFormat = new Intl.DateTimeFormat("ru-RU", {
+  hour: "2-digit", minute: "2-digit", second: "2-digit",
+});
 const zoomLevels = [100, 125, 150, 200];
 let zoomIndex = 0;
+let selectedPoint = "R1";
+let snapshot;
+
+function showPointTelemetry() {
+  const repeater = selectedPoint === "R1";
+  const zone = snapshot.zones.find(zone => zone.id === selectedPoint);
+  const status = repeater ? (snapshot.online ? "good" : "critical") : zone?.status;
+  pointStatus.className = "status " + (status || "");
+  pointStatus.lastElementChild.textContent = repeater
+    ? (snapshot.online ? "В работе" : "Отключён")
+    : (statusLabels[status] || "Нет данных");
+  pointMetrics.hidden = repeater;
+  for (const [metric, element] of Object.entries(metricValues)) {
+    const value = zone?.reading?.[metric];
+    element.textContent = Number.isFinite(value) ? formatValue(value) + " " + metrics[metric].unit : "—";
+  }
+
+  const alarms = snapshot.alarms.filter(alarm => alarm.sourceId === selectedPoint && Object.hasOwn(alarmTypes, alarm.type));
+  pointAlarms.replaceChildren(...alarms.map(({ sourceId, type }) => {
+    const { title, detail, level } = alarmDetails(sourceId, type);
+    const item = document.createElement("li");
+    const label = document.createElement("strong");
+    label.className = level;
+    label.textContent = severityLabels[level] + " · " + title;
+    const description = document.createElement("p");
+    description.textContent = detail;
+    item.append(label, description);
+    return item;
+  }));
+  pointAlarms.hidden = alarms.length === 0;
+  noAlarms.hidden = alarms.length > 0;
+}
+
+function syncMonitoring() {
+  snapshot = readSnapshot();
+  for (const marker of map.querySelectorAll("[data-point]")) {
+    const id = marker.dataset.point;
+    const repeater = id === "R1";
+    const status = repeater ? (snapshot.online ? "good" : "critical")
+      : snapshot.zones.find(zone => zone.id === id)?.status;
+    const label = repeater ? (snapshot.online ? "В работе" : "Отключён") : (statusLabels[status] || "Нет данных");
+    marker.dataset.status = status || "critical";
+    marker.title = id + " · " + points[id].title + " · " + label;
+    marker.setAttribute("aria-label", marker.title);
+  }
+  dataCaption.textContent = snapshot.time === null
+    ? "Тестовые данные"
+    : "Тестовые данные · " + timeFormat.format(snapshot.time);
+  showPointTelemetry();
+}
+
 
 function centerOnPoint(marker) {
   const viewport = drawing.getBoundingClientRect();
@@ -50,6 +114,7 @@ function centerOnPoint(marker) {
 for (const button of pointButtons) {
   button.addEventListener("click", () => {
     const id = button.dataset.point;
+    selectedPoint = id;
     const { type = "Антенна", title, description } = points[id];
     pointType.textContent = id + " · " + type;
     pointTitle.textContent = title;
@@ -57,6 +122,7 @@ for (const button of pointButtons) {
     for (const control of pointButtons) {
       control.setAttribute("aria-pressed", String(control.dataset.point === id));
     }
+    showPointTelemetry();
     centerOnPoint(map.querySelector('[data-point="' + id + '"]'));
   });
 }
@@ -73,3 +139,9 @@ function changeZoom(step) {
 
 zoomOut.addEventListener("click", () => changeZoom(-1));
 zoomIn.addEventListener("click", () => changeZoom(1));
+
+window.addEventListener("storage", event => {
+  if (event.key === snapshotKey || event.key === null) syncMonitoring();
+});
+window.addEventListener("pageshow", syncMonitoring);
+syncMonitoring();
