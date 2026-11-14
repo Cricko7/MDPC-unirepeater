@@ -182,10 +182,10 @@ const monitoringTelemetry = (() => {
 
   function watchTelemetry(render, reportError) {
     let pending;
-    async function refresh(choice = readScenario()) {
+    async function refresh(choice = readScenario(), force = false) {
       const url = new URL(serverUrl, location.href);
       if (!choice.followsDefault) url.searchParams.set("scenario", choice.id);
-      if (pending?.url === url.href) return;
+      if (!force && pending?.url === url.href) return;
       pending?.controller.abort();
       const controller = new AbortController();
       pending = { url: url.href, controller };
@@ -205,6 +205,9 @@ const monitoringTelemetry = (() => {
     const refreshVisible = () => { if (!document.hidden) refresh(); };
     setInterval(refreshVisible, serverInterval);
     document.addEventListener("visibilitychange", refreshVisible);
+    window.addEventListener("storage", event => {
+      if (event.key === "mdpc.monitor.server-write") refresh(readScenario(), true);
+    });
     return refresh;
   }
 

@@ -420,7 +420,7 @@ class Handler(BaseHTTPRequestHandler):
         except (OSError, ValueError):
             self.json(500, {"error": "Хранилище настроек недоступно для записи."})
             return
-        self.json(200, result)
+        self.json(200, result, {"X-Datark-Write": "saved"})
 
 
 if __name__ == "__main__":

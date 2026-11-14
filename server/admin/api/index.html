@@ -7,12 +7,15 @@
   <link rel="icon" href="/assets/datark-logo.png">
   <link rel="stylesheet" href="vendor/swagger-ui.css">
   <script src="vendor/swagger-ui-bundle.js" defer></script>
-  <script src="swagger-init.js" defer></script>
+  <script src="swagger-init.js?v=monitor-sync-1" defer></script>
 </head>
 <body>
   <nav class="swagger-ui">
     <div class="wrapper">
       <p><a href="../">Админ-панель</a> · <a href="openapi.json">OpenAPI JSON</a></p>
+      <p>Чтобы изменить показания зоны, выполните <code>PUT /admin/telemetry</code>. Публичные <code>GET</code> читают данные.</p>
+      <p id="write-feedback" role="status" hidden></p>
+      <p><a id="monitor-link" href="/monitor/">Открыть мониторинг</a> · <a href="/monitor/?scenario=server">Мониторинг по настройкам сайта</a></p>
     </div>
   </nav>
   <main id="swagger-ui"></main>

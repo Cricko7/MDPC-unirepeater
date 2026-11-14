@@ -562,10 +562,17 @@ for (const button of metricButtons) {
   });
 }
 if (refreshServer) {
+  const params = new URLSearchParams(location.search);
+  const linkedZone = params.get("zone");
+  if (zones.some(zone => zone.id === linkedZone)) {
+    selectedZone = linkedZone;
+    saveSelectedZone(linkedZone);
+  }
+  const linkedScenario = params.get("scenario") === "server" ? chooseScenario("server") : readScenario();
   elements["telemetry-source"].textContent = "Загрузка телеметрии с сервера…";
   elements.scenario.disabled = false;
   new ResizeObserver(renderChart).observe(elements.chart);
-  updateScenario();
+  updateScenario(linkedScenario);
 } else siteDefaults.then(defaults => {
   setDefaultScenario(defaults.scenario);
   const choice = readScenario();
