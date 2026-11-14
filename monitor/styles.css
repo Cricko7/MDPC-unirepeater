@@ -55,6 +55,10 @@ p { line-height: 1.5; }
 .panel-heading p, .trend-heading p { font-size: .83rem; }
 .controls { display: flex; gap: 8px; align-items: center; }
 .controls label { color: var(--muted); font-size: .82rem; }
+.controls .alarm-notifications {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 41px; cursor: pointer;
+}
+.alarm-notifications input { margin: 0; accent-color: var(--accent); cursor: pointer; }
 .controls select, .refresh {
   min-height: 41px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
 }
@@ -211,7 +215,7 @@ footer { padding: 17px 0; font-size: .78rem; }
   .demo { font-size: .65rem; padding: 5px 6px; }
   .page-heading { margin-top: 23px; }
   .controls { flex-wrap: wrap; }
-  .controls label { width: 100%; }
+  .controls label[for="scenario"] { width: 100%; }
   .controls select { min-width: 0; max-width: 100%; }
   .summary { grid-template-columns: 1fr 1fr; gap: 8px; }
   .tile { padding: 12px; }

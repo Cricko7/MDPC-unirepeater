@@ -7,14 +7,29 @@ const {
   selectedZoneKey, readSelectedZone, saveSelectedZone,
 } = monitoringTelemetry;
 const historyPageSizeKey = "mdpc.monitor.historyPageSize";
+const alarmNotificationsKey = "mdpc.monitor.alarmNotifications";
 const elements = Object.fromEntries([
-  "scenario", "refresh", "summary", "zones", "chart", "trend-title",
+  "scenario", "refresh", "alarm-notifications", "summary", "zones", "chart", "trend-title",
   "alarms", "alarm-count", "updated", "announcement",
   "floor-map", "repeater-marker", "zone-details",
   "history-zone", "history-level", "history-rows", "history-count", "history-storage", "history-export",
   "history-status", "history-from", "history-to", "history-sort", "history-filters", "history-reset",
   "history-pagination", "history-prev", "history-next", "history-page", "history-page-size",
 ].map(id => [id, document.getElementById(id)]));
+const alarmNotifications = elements["alarm-notifications"];
+try {
+  alarmNotifications.checked = localStorage.getItem(alarmNotificationsKey) !== "off";
+} catch {
+  // The switch still works for the current page without browser storage.
+}
+alarmNotifications.addEventListener("change", () => {
+  if (!alarmNotifications.checked) showToast.dismiss("alarm");
+  try {
+    localStorage.setItem(alarmNotificationsKey, alarmNotifications.checked ? "on" : "off");
+  } catch {
+    // The switch still works for the current page without browser storage.
+  }
+});
 const metricButtons = document.querySelectorAll("[data-metric]");
 const mapMarkers = new Map(Array.from(elements["floor-map"].querySelectorAll("[data-zone]"),
   button => [button.dataset.zone, button]));
@@ -345,11 +360,12 @@ function render({ recordAlarms = false, scenarioChanged = false, notify = true }
     events = updateAlarmHistory(alarms, time.getTime());
     if (events.length || scenarioChanged) saveAlarmHistory();
     renderAlarmHistory();
-    if (notify && events.length) showAlarmEvents(events);
   }
   elements.updated.dateTime = time.toISOString();
   elements.updated.textContent = `Обновлено в ${timeFormat.format(time)}`;
-  return events.length;
+  const notified = notify && alarmNotifications.checked && events.length > 0;
+  if (notified) showAlarmEvents(events);
+  return notified;
 }
 
 function reset(notify = true) {
@@ -392,9 +408,9 @@ window.addEventListener("pageshow", event => {
   syncSelectedZone();
 });
 elements.refresh.addEventListener("click", () => {
-  const events = nextSample();
+  const notified = nextSample();
   restartTimer();
-  if (!events && document.querySelector('.toast-notice[data-tone="alarm"]')?.hidden !== false) {
+  if (!notified && document.querySelector('.toast-notice[data-tone="alarm"]')?.hidden !== false) {
     showToast("Показания мониторинга обновлены.");
   }
 });

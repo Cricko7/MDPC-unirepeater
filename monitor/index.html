@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#202430">
   <title>Мониторинг связи · МЦОД Датарк</title>
-  <link rel="stylesheet" href="styles.css?v=datark-design-1">
+  <link rel="stylesheet" href="styles.css?v=alarm-preference-1">
   <link rel="stylesheet" href="../assets/toasts.css?v=2">
-  <script src="../assets/toasts.js?v=2" defer></script>
+  <script src="../assets/toasts.js?v=3" defer></script>
   <script src="../assets/site-config.js?v=1" defer></script>
   <script src="telemetry.js?v=4" defer></script>
-  <script src="monitor.js?v=alarm-toasts-1" defer></script>
+  <script src="monitor.js?v=alarm-preference-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -30,6 +30,10 @@
           <option value="offline">Репитер отключён</option>
         </select>
         <button class="refresh" id="refresh" type="button" disabled>Обновить</button>
+        <label class="alarm-notifications">
+          <input id="alarm-notifications" type="checkbox" checked>
+          Уведомления о тревогах
+        </label>
       </div>
     </div>
     <div class="summary" id="summary" aria-label="Состояние системы"></div>

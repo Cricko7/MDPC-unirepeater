@@ -29,7 +29,7 @@ const showToast = (() => {
     if (event.key === "Escape") hide();
   });
 
-  return (text, tone = "info") => {
+  function show(text, tone = "info") {
     clearTimeout(timer);
     trigger = document.activeElement;
     notice.dataset.tone = tone;
@@ -38,5 +38,9 @@ const showToast = (() => {
     if (tone !== "error") timer = setTimeout(() => {
       if (!notice.contains(document.activeElement)) hide();
     }, tone === "alarm" ? 15000 : 6500);
+  }
+  show.dismiss = tone => {
+    if (!notice.hidden && notice.dataset.tone === tone) hide();
   };
+  return show;
 })();
