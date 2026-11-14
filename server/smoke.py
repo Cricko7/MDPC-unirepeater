@@ -44,6 +44,11 @@ def check(base):
         assert request(path), path
     request("/admin/", 401)
     request("/admin/admin.js", 401)
+    request("/admin/api/", 401)
+    request("/admin/api/openapi.json", 401)
+    assert b'id="swagger-ui"' in request("/admin/api/", headers=auth)
+    spec = json.loads(request("/admin/api/openapi.json", headers=auth))
+    assert spec["paths"]["/admin/settings"]["put"]["security"] == [{"BasicAuth": []}]
     request("/server/app.py", 404)
     request("/admin/%2e%2e/app.py", 404, headers=auth)
     request("/admin/settings", 401)
@@ -81,6 +86,11 @@ def main():
                 subprocess.run([*project, "up", "-d", "--wait", "--wait-timeout", "45"], env=env, check=True)
                 address = subprocess.check_output([*project, "port", "web", "8080"], env=env, text=True).strip()
                 check("http://" + address)
+                auth = base64.b64encode(b"admin:smoke-only-password").decode()
+                asset = Request("http://" + address + "/admin/api/vendor/swagger-ui-bundle.js",
+                                headers={"Authorization": "Basic " + auth})
+                with urlopen(asset, timeout=4) as response:
+                    assert b"SwaggerUIBundle" in response.read()
                 subprocess.run([*project, "up", "-d", "--wait", "--force-recreate", "web"], env=env, check=True)
                 address = subprocess.check_output([*project, "port", "web", "8080"], env=env, text=True).strip()
                 with urlopen("http://" + address + "/assets/site-defaults.json", timeout=4) as response:

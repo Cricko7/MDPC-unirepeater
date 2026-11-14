@@ -1,0 +1,395 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Датарк API",
+    "version": "1.0.0",
+    "description": "Запросы к серверу демонстрации. PUT заменяет общие стартовые настройки. Перед изменением скопируйте текущий JSON из GET."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "summary": "Состояние и ревизия сервера",
+        "responses": {
+          "200": {
+            "description": "Сервис работает",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Настройки недоступны или некорректны",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets/site-defaults.json": {
+      "get": {
+        "summary": "Публичные стартовые настройки",
+        "responses": {
+          "200": {
+            "description": "Текущие настройки",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Настройки недоступны",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/settings": {
+      "get": {
+        "summary": "Прочитать настройки администратора",
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Текущие настройки",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Требуется вход",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Настройки или пароль недоступны",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Заменить стартовые настройки",
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Datark-Admin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "settings"
+              ],
+              "default": "settings"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Settings"
+              },
+              "example": {
+                "scenario": "mixed",
+                "calculator": {
+                  "operators": [
+                    {
+                      "name": "МТС",
+                      "band": "B1",
+                      "bandwidth_mhz": 10,
+                      "das_dl_dbm": 16
+                    },
+                    {
+                      "name": "МегаФон",
+                      "band": "B1",
+                      "bandwidth_mhz": 10,
+                      "das_dl_dbm": 16
+                    },
+                    {
+                      "name": "билайн",
+                      "band": "B1",
+                      "bandwidth_mhz": 10,
+                      "das_dl_dbm": 16
+                    },
+                    {
+                      "name": "t2",
+                      "band": "B1",
+                      "bandwidth_mhz": 10,
+                      "das_dl_dbm": 16
+                    },
+                    {
+                      "name": "МОТИВ",
+                      "band": "B3",
+                      "bandwidth_mhz": 10,
+                      "das_dl_dbm": 16
+                    }
+                  ],
+                  "gsm": {
+                    "band": "1800",
+                    "arfcn": 698
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Настройки сохранены",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Settings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Некорректные настройки",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Требуется вход",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Неверный заголовок или тип запроса",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Недопустимый размер запроса",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ошибка записи",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Пароль администратора недоступен",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    },
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "required": [
+          "status",
+          "revision"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "unhealthy"
+            ]
+          },
+          "revision": {
+            "type": "string"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Operator": {
+        "type": "object",
+        "required": [
+          "name",
+          "band",
+          "bandwidth_mhz",
+          "das_dl_dbm"
+        ],
+        "properties": {
+          "name": {
+            "enum": [
+              "МТС",
+              "МегаФон",
+              "билайн",
+              "t2",
+              "МОТИВ"
+            ]
+          },
+          "band": {
+            "enum": [
+              "B1",
+              "B3",
+              "B7"
+            ]
+          },
+          "bandwidth_mhz": {
+            "enum": [
+              1.4,
+              3,
+              5,
+              10,
+              15,
+              20
+            ]
+          },
+          "das_dl_dbm": {
+            "type": "number"
+          },
+          "dl_mhz": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Центр DL в МГц. При отсутствии используется верхняя граница диапазона."
+          }
+        }
+      },
+      "Settings": {
+        "type": "object",
+        "required": [
+          "scenario",
+          "calculator"
+        ],
+        "properties": {
+          "scenario": {
+            "enum": [
+              "mixed",
+              "normal",
+              "offline"
+            ]
+          },
+          "calculator": {
+            "type": "object",
+            "required": [
+              "operators",
+              "gsm"
+            ],
+            "properties": {
+              "operators": {
+                "type": "array",
+                "minItems": 5,
+                "maxItems": 5,
+                "description": "Порядок: МТС, МегаФон, билайн, t2, МОТИВ. Ширина и частота должны соответствовать выбранному диапазону.",
+                "items": {
+                  "$ref": "#/components/schemas/Operator"
+                }
+              },
+              "gsm": {
+                "type": "object",
+                "required": [
+                  "band",
+                  "arfcn"
+                ],
+                "properties": {
+                  "band": {
+                    "enum": [
+                      "900",
+                      "1800"
+                    ]
+                  },
+                  "arfcn": {
+                    "type": "integer",
+                    "description": "Для 900: 0–124 или 975–1023. Для 1800: 512–885."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

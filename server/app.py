@@ -119,7 +119,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(content)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'")
+        policy = "default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'"
+        if urlsplit(self.path).path == "/admin/api/":
+            policy += "; img-src 'self' data:"
+        self.send_header("Content-Security-Policy", policy)
         for key, value in (headers or {}).items():
             self.send_header(key, value)
         self.end_headers()
