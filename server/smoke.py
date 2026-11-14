@@ -145,6 +145,22 @@ def check(base):
     for _ in range(2):
         assert json.loads(request(telemetry_path, body=reset_all, headers=telemetry_auth)) == reset_all
     assert not any(zone["manual"] for zone in json.loads(request("/api/telemetry"))["zones"])
+    examples = spec["paths"][telemetry_path]["put"]["requestBody"]["content"]["application/json"]["examples"]
+    for name, status, alarms in (
+        ("normal", "good", []),
+        ("degraded", "warning", ["low-signal"]),
+        ("noTelemetry", "critical", ["no-telemetry"]),
+        ("restore", "good", []),
+    ):
+        example = examples[name]["value"]
+        assert example["zone"] == "A3"
+        assert json.loads(request(telemetry_path, body=example, headers=telemetry_auth)) == example
+        snapshot = json.loads(request("/api/telemetry?scenario=normal"))
+        zone = next(zone for zone in snapshot["zones"] if zone["id"] == "A3")
+        assert zone["status"] == status and zone["manual"] == (name != "restore")
+        assert [alarm["type"] for alarm in snapshot["alarms"] if alarm["sourceId"] == "A3"] == alarms
+        if example["override"] is not None:
+            assert zone["reading"] == example["override"]["reading"]
     settings["calculator"]["operators"][0]["dl_mhz"] = 100
     request("/admin/settings", 400, body=settings, headers=write)
     assert "dl_mhz" not in json.loads(request("/assets/site-defaults.json"))["calculator"]["operators"][0]

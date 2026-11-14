@@ -46,18 +46,45 @@
                 "$ref": "#/components/schemas/ZoneTelemetryUpdate"
               },
               "examples": {
-                "manual": {
+                "normal": {
+                  "summary": "Норма в A3",
+                  "value": {
+                    "zone": "A3",
+                    "override": {
+                      "status": "good",
+                      "reading": {
+                        "rsrp": -85,
+                        "sinr": 18
+                      },
+                      "alarms": []
+                    }
+                  }
+                },
+                "degraded": {
                   "summary": "Деградация сигнала в A3",
                   "value": {
                     "zone": "A3",
                     "override": {
                       "status": "warning",
                       "reading": {
-                        "rsrp": -107,
-                        "sinr": 3
+                        "rsrp": -117,
+                        "sinr": -2
                       },
                       "alarms": [
                         "low-signal"
+                      ]
+                    }
+                  }
+                },
+                "noTelemetry": {
+                  "summary": "Потеря телеметрии в A3",
+                  "value": {
+                    "zone": "A3",
+                    "override": {
+                      "status": "critical",
+                      "reading": null,
+                      "alarms": [
+                        "no-telemetry"
                       ]
                     }
                   }
