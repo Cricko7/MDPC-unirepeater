@@ -7,7 +7,7 @@
 .landing-header, .landing-footer { border-color: var(--line); border-style: solid; border-width: 0 0 1px; }
 .landing-nav, .landing-nav nav, .landing-brand { display: flex; align-items: center; }
 .landing-nav { min-height: 68px; justify-content: space-between; gap: 20px; }
-.landing-nav nav { gap: clamp(16px, 3vw, 42px); }
+.landing-nav nav { flex-wrap: wrap; gap: 7px clamp(16px, 3vw, 42px); }
 .landing-nav a { text-decoration: none; color: inherit; }
 .landing-nav nav a { color: var(--muted); font-size: .87rem; }
 .landing-nav nav a:hover, .text-link:hover { color: #fff; }

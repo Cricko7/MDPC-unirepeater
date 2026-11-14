@@ -45,6 +45,7 @@ def check(base):
 
     for path in ("/", "/monitor/", "/monitor/budget.html", "/tools/mdpc-scenario.json", "/docs/mdpc-radio-layout.png"):
         assert request(path), path
+    assert b'<a href="/admin/api/">Swagger UI</a>' in request("/")
     request("/admin/", 401)
     request("/admin/admin.js", 401)
     request("/admin/api/", 401)

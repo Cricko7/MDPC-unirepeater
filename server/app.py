@@ -224,6 +224,10 @@ class Handler(BaseHTTPRequestHandler):
         except OSError:
             self.json(404, {"error": "Страница не найдена."})
             return
+        if root == PUBLIC and file == PUBLIC / "index.html":
+            content = content.replace(
+                b"<!-- SERVER_NAVIGATION -->", b'<a href="/admin/api/">Swagger UI</a>', 1,
+            )
         self.send_payload(200, content, media_type)
 
     def do_PUT(self):
