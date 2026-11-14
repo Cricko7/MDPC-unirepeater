@@ -617,6 +617,13 @@ function setup(scenario) {
   carrierRows.replaceChildren(...operators.map(operator => operator.row));
   const gsmBand = document.getElementById("gsm-band");
   const gsmArfcn = document.getElementById("gsm-arfcn");
+  const gsmDefaults = scenario.gsm ?? { band: "1800", arfcn: 698 };
+  function resetGsm() {
+    gsmBand.value = gsmDefaults.band;
+    gsmArfcn.value = gsmDefaults.arfcn;
+  }
+  resetGsm();
+
   function applySettings(saved) {
     for (const { fields, name } of operators) {
       const carrier = saved.carriers?.[name];
@@ -809,8 +816,7 @@ function setup(scenario) {
   });
   resetButton.addEventListener("click", () => {
     for (const { fields, defaults } of operators) resetCarrier(fields, defaults);
-    gsmBand.selectedIndex = 0;
-    gsmArfcn.value = gsmArfcn.defaultValue;
+    resetGsm();
     settingsStatus.textContent = "";
     saveAndRender();
   });
@@ -825,7 +831,14 @@ fetch("../tools/mdpc-scenario.json")
     if (!response.ok) throw new Error(String(response.status));
     return response.json();
   })
-  .then(setup)
+  .then(async scenario => {
+    const { calculator } = await siteDefaults;
+    if (calculator) {
+      scenario.operators = calculator.operators;
+      scenario.gsm = calculator.gsm;
+    }
+    setup(scenario);
+  })
   .catch(() => {
     errors.textContent = "Расчётный сценарий не загрузился. Откройте калькулятор через GitHub Pages или локальный HTTP-сервер.";
   });

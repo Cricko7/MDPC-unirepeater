@@ -3,7 +3,7 @@
 const {
   interval, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
   alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot,
-  historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario,
+  historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario, setDefaultScenario,
   selectedZoneKey, readSelectedZone, saveSelectedZone,
 } = monitoringTelemetry;
 const historyPageSizeKey = "mdpc.monitor.historyPageSize";
@@ -76,7 +76,7 @@ function saveAlarmHistory() {
   try {
     const entries = alarmHistory.map(({ sourceId, type, occurredAt, recoveredAt }) =>
       ({ sourceId, type, occurredAt, recoveredAt }));
-    localStorage.setItem(historyStorageKey, JSON.stringify({ entries, scenario }));
+    localStorage.setItem(historyStorageKey, JSON.stringify({ entries }));
     notice.textContent = "История тестовых событий сохраняется в этом браузере.";
   } catch {
     notice.textContent = "Хранилище браузера недоступно. Новые записи сохраняются до перезагрузки.";
@@ -456,5 +456,12 @@ for (const button of metricButtons) {
     renderChart();
   });
 }
-reset();
-new ResizeObserver(renderChart).observe(elements.chart);
+siteDefaults.then(defaults => {
+  setDefaultScenario(defaults.scenario);
+  scenario = readScenario().id;
+  elements.scenario.value = scenario;
+  reset();
+  elements.scenario.disabled = false;
+  elements.refresh.disabled = false;
+  new ResizeObserver(renderChart).observe(elements.chart);
+});

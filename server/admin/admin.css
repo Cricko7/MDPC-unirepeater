@@ -1,0 +1,10 @@
+#settings { padding: 20px; }
+#settings fieldset { min-width: 0; border: 1px solid var(--line); padding: 14px; margin: 0 0 16px; }
+#settings legend { padding: 0 7px; font-weight: 650; }
+#settings .table-scroll { margin-top: 10px; }
+#settings td input { width: 110px; }
+.admin-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  #settings { padding: 12px; }
+  .page-heading { align-items: start; flex-direction: column; }
+}

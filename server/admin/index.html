@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Настройки демонстрации · Датарк</title>
+  <link rel="stylesheet" href="../monitor/styles.css">
+  <link rel="stylesheet" href="../monitor/budget.css">
+  <link rel="stylesheet" href="admin.css">
+  <script src="admin.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="page-heading">
+      <div><h1>Настройки демонстрации</h1><p>Стартовые значения для новых посетителей. Личные настройки пользователей сохраняются в их браузерах.</p></div>
+      <a href="../">На главную</a>
+    </header>
+    <form id="settings" class="panel">
+      <fieldset disabled>
+        <legend>Тестовый сценарий мониторинга</legend>
+        <label class="budget-control">Сценарий <select id="scenario">
+          <option value="mixed">Деградация и потеря связи</option>
+          <option value="normal">Штатная работа</option>
+          <option value="offline">Репитер отключён</option>
+        </select></label>
+      </fieldset>
+      <fieldset disabled>
+        <legend>Несущие калькулятора</legend>
+        <p>Пустая частота включает расчёт по верхней границе диапазона.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">Оператор</th><th scope="col">LTE</th><th scope="col">Центр DL, МГц</th><th scope="col">Ширина, МГц</th><th scope="col">Мощность, дБм</th></tr></thead>
+            <tbody id="operators"></tbody>
+          </table>
+        </div>
+      </fieldset>
+      <fieldset disabled>
+        <legend>Тестовый GSM-канал</legend>
+        <div class="admin-actions">
+          <label class="budget-control">Диапазон <select id="gsm-band"><option value="1800">DCS 1800</option><option value="900">E-GSM 900</option></select></label>
+          <label class="budget-control">ARFCN <input type="number" id="gsm-arfcn" step="1" required></label>
+        </div>
+      </fieldset>
+      <div class="admin-actions">
+        <button disabled class="refresh" id="save" type="submit">Сохранить настройки</button>
+        <p id="result" role="status">Загрузка настроек…</p>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

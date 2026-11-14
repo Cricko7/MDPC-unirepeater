@@ -28,7 +28,7 @@ const points = {
 
 const {
   statusLabels, severityLabels, alarmDetails, alarmTypes, formatValue, metrics,
-  snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot,
+  snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot, setDefaultScenario,
   selectedZoneKey, readSelectedZone, saveSelectedZone,
 } = monitoringTelemetry;
 const linkParams = new URLSearchParams(location.search);
@@ -82,6 +82,7 @@ function updateShareLink() {
 }
 
 copyLink.addEventListener("click", async () => {
+  if (!snapshot) return;
   const url = layoutUrl().href;
   try {
     await navigator.clipboard.writeText(url);
@@ -164,7 +165,7 @@ function showPoint(id) {
   for (const control of pointButtons) {
     control.setAttribute("aria-pressed", String(control.dataset.point === id));
   }
-  showPointTelemetry();
+  if (snapshot) showPointTelemetry();
   centerOnPoint(map.querySelector('[data-point="' + id + '"]'));
 }
 
@@ -202,6 +203,7 @@ zoomOut.addEventListener("click", () => changeZoom(-1));
 zoomIn.addEventListener("click", () => changeZoom(1));
 
 function refreshMonitoring() {
+  if (!snapshot) return;
   const previousScenario = snapshot.scenario;
   syncMonitoring();
   if (snapshot.scenario !== previousScenario) updateShareLink();
@@ -221,16 +223,20 @@ window.addEventListener("pageshow", event => {
   syncSelectedZone();
 });
 
-const validLinkedScenario = Array.from(scenarioSelect.options).some(option => option.value === linkedScenario);
-const sharedScenario = validLinkedScenario && linkedScenario !== readScenario().id
-  ? chooseScenario(linkedScenario)
-  : undefined;
-if (Object.hasOwn(points, linkedPoint)) {
-  selectedPoint = linkedPoint;
-  if (selectedPoint !== "R1") {
-    sharedZone = selectedPoint;
-    saveSelectedZone(sharedZone);
+siteDefaults.then(defaults => {
+  setDefaultScenario(defaults.scenario);
+  const validLinkedScenario = Array.from(scenarioSelect.options).some(option => option.value === linkedScenario);
+  const sharedScenario = validLinkedScenario && linkedScenario !== readScenario().id
+    ? chooseScenario(linkedScenario)
+    : undefined;
+  if (Object.hasOwn(points, linkedPoint)) {
+    selectedPoint = linkedPoint;
+    if (selectedPoint !== "R1") {
+      sharedZone = selectedPoint;
+      saveSelectedZone(sharedZone);
+    }
   }
-}
-syncMonitoring(sharedScenario);
-showPoint(selectedPoint);
+  syncMonitoring(sharedScenario);
+  showPoint(selectedPoint);
+  scenarioSelect.disabled = false;
+});

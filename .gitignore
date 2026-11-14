@@ -31,3 +31,10 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Datark server credentials
+/deploy/admin-password
+/deploy/current-image
+**/__pycache__/
+/deploy/.deploy.lock
+/deploy/current-image.tmp

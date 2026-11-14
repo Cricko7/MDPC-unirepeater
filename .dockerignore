@@ -1,0 +1,9 @@
+.git
+.github
+.idea
+output
+.env
+.env.*
+**/__pycache__
+**/*.pyc
+**/admin-password

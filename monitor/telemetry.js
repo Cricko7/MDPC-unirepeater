@@ -132,16 +132,22 @@ const monitoringTelemetry = (() => {
     return ["mixed", "normal", "offline"].includes(value);
   }
 
+  let defaultScenario = "mixed";
+
+  function setDefaultScenario(scenario) {
+    if (validScenario(scenario)) defaultScenario = scenario;
+  }
+
   function readScenario() {
     try {
       const choice = JSON.parse(localStorage.getItem(scenarioKey));
       if (validScenario(choice?.id) && Number.isFinite(choice.changedAt)) return choice;
       const previous = JSON.parse(localStorage.getItem(historyStorageKey))?.scenario;
-      if (validScenario(previous)) return { id: previous, changedAt: 0 };
+      if (validScenario(previous) && previous !== "mixed") return chooseScenario(previous);
     } catch {
       // Use the demo default when storage is unavailable.
     }
-    return { id: "mixed", changedAt: 0 };
+    return { id: defaultScenario, changedAt: 0 };
   }
 
   function chooseScenario(id) {
@@ -172,7 +178,7 @@ const monitoringTelemetry = (() => {
   return {
     interval, sampleCount, metrics, zones, variation, statusLabels, severityLabels, alarmTypes,
     alarmSources, alarmDetails, formatValue, makeSample, seedSamples, createSnapshot,
-    historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot,
+    historyStorageKey, snapshotKey, scenarioKey, readScenario, chooseScenario, readSnapshot, setDefaultScenario,
     selectedZoneKey, readSelectedZone, saveSelectedZone,
   };
 })();

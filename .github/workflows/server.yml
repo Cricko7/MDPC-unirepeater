@@ -1,0 +1,89 @@
+name: Server image
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check scripts and calculate radio budget
+        run: |
+          find assets monitor server/admin -name '*.js' -print0 | xargs -0 -n 1 node --check
+          python tools/mdpc-link-budget.py
+          bash -n deploy/deploy.sh
+          docker compose config --quiet
+      - name: Build and test the container
+        run: |
+          docker build --build-arg REVISION="$GITHUB_SHA" -t datark:local .
+          python server/smoke.py --docker
+      - name: Upload the tested image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: docker save datark:local | gzip -1 > image.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          name: datark-image
+          path: image.tar.gz
+          retention-days: 2
+
+  publish:
+    needs: verify
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    outputs:
+      image: ${{ steps.push.outputs.image }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: datark-image
+      - name: Publish the verified image to GHCR
+        id: push
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gunzip -c image.tar.gz | docker load
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:sha-$GITHUB_SHA"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag datark:local "$image"
+          docker push "$image"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: publish
+    if: vars.DATARK_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: datark-production
+    steps:
+      - name: Deploy on the Linux server
+        env:
+          DEPLOY_HOST: ${{ vars.DATARK_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DATARK_DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DATARK_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DATARK_DEPLOY_KNOWN_HOSTS }}
+          IMAGE: ${{ needs.publish.outputs.image }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" != "$GITHUB_SHA" ]]; then
+            echo "Skipping deployment because main has moved."
+            exit 0
+          fi
+          umask 077
+          : "${DEPLOY_HOST:?}" "${DEPLOY_USER:?}" "${DEPLOY_KEY:?}" "${DEPLOY_KNOWN_HOSTS:?}"
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/datark-key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/datark-known-hosts"
+          ssh -i "$RUNNER_TEMP/datark-key" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/datark-known-hosts" \
+            -l "$DEPLOY_USER" -- "$DEPLOY_HOST" /opt/datark/deploy/deploy.sh "$IMAGE"
