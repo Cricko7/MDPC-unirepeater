@@ -21,6 +21,15 @@
 }
 .toast-notice[hidden] { display: none; }
 .toast-notice[data-tone="error"] { border-inline-start-color: #ff849a; }
+.toast-notice[data-tone="alarm"] {
+  align-items: start;
+  border-inline-start-color: #ffce70;
+}
+.toast-notice[data-tone="alarm"] span {
+  white-space: pre-line;
+  max-height: 58vh;
+  overflow: auto;
+}
 .toast-notice button {
   margin-inline-start: auto;
   background: transparent;

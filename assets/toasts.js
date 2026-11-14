@@ -37,6 +37,6 @@ const showToast = (() => {
     message.textContent = text;
     if (tone !== "error") timer = setTimeout(() => {
       if (!notice.contains(document.activeElement)) hide();
-    }, 6500);
+    }, tone === "alarm" ? 15000 : 6500);
   };
 })();

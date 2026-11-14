@@ -131,7 +131,7 @@ function renderAlarms(alarms) {
 }
 
 function updateAlarmHistory(alarms, time) {
-  let changed = false;
+  const events = [];
   const activeKeys = new Set();
   for (const alarm of alarms) {
     const key = alarmKey(alarm);
@@ -140,16 +140,25 @@ function updateAlarmHistory(alarms, time) {
     const entry = { ...alarm, occurredAt: time, recoveredAt: null };
     alarmHistory.push(entry);
     openAlarms.set(key, entry);
-    changed = true;
+    events.push({ entry, recovered: false });
   }
   for (const [key, entry] of openAlarms) {
     if (!activeKeys.has(key)) {
       entry.recoveredAt = Math.max(entry.occurredAt, time);
       openAlarms.delete(key);
-      changed = true;
+      events.push({ entry, recovered: true });
     }
   }
-  return changed;
+  return events;
+}
+
+function showAlarmEvents(events) {
+  const messages = events.map(({ entry, recovered }) => {
+    const action = recovered ? "Восстановление" : "Новая тревога";
+    const time = recovered ? entry.recoveredAt : entry.occurredAt;
+    return `${action}: ${entry.source} · ${severityLabels[entry.level]}\n${entry.title} · ${historyTimeFormat.format(time)}`;
+  });
+  showToast(messages.join("\n\n"), "alarm");
 }
 
 function historyTime(time) {
@@ -316,7 +325,7 @@ function renderChart() {
   </svg>`;
 }
 
-function render({ recordAlarms = false, scenarioChanged = false } = {}) {
+function render({ recordAlarms = false, scenarioChanged = false, notify = true } = {}) {
   const snapshot = createSnapshot(scenario, samples, lastSeen);
   const states = zones.map((zone, index) => ({ zone, status: snapshot.zones[index].status }));
   const alarms = snapshot.alarms.map(({ sourceId, type }) => alarmDetails(sourceId, type));
@@ -326,31 +335,34 @@ function render({ recordAlarms = false, scenarioChanged = false } = {}) {
   renderAlarms(alarms);
   renderChart();
   const time = new Date(samples.at(-1).time);
+  let events = [];
   if (recordAlarms) {
     try {
       localStorage.setItem(snapshotKey, JSON.stringify(snapshot));
     } catch {
       // Monitoring still works without browser storage.
     }
-    const historyChanged = updateAlarmHistory(alarms, time.getTime());
-    if (historyChanged || scenarioChanged) saveAlarmHistory();
+    events = updateAlarmHistory(alarms, time.getTime());
+    if (events.length || scenarioChanged) saveAlarmHistory();
     renderAlarmHistory();
+    if (notify && events.length) showAlarmEvents(events);
   }
   elements.updated.dateTime = time.toISOString();
   elements.updated.textContent = `Обновлено в ${timeFormat.format(time)}`;
+  return events.length;
 }
 
-function reset() {
+function reset(notify = true) {
   ({ samples, lastSeen } = seedSamples(scenario, Date.now()));
   sequence = sampleCount;
-  render({ recordAlarms: true, scenarioChanged: true });
+  render({ recordAlarms: true, scenarioChanged: true, notify });
   restartTimer();
 }
 
 function nextSample() {
   samples = [...samples.slice(1), makeSample(sequence, Date.now(), scenario, lastSeen)];
   sequence += 1;
-  render({ recordAlarms: true });
+  return render({ recordAlarms: true });
 }
 
 function restartTimer() {
@@ -380,9 +392,11 @@ window.addEventListener("pageshow", event => {
   syncSelectedZone();
 });
 elements.refresh.addEventListener("click", () => {
-  nextSample();
+  const events = nextSample();
   restartTimer();
-  showToast("Показания мониторинга обновлены.");
+  if (!events && document.querySelector('.toast-notice[data-tone="alarm"]')?.hidden !== false) {
+    showToast("Показания мониторинга обновлены.");
+  }
 });
 function showZone(id) {
   if (selectedZone === id) return;
@@ -461,7 +475,7 @@ siteDefaults.then(defaults => {
   setDefaultScenario(defaults.scenario);
   scenario = readScenario().id;
   elements.scenario.value = scenario;
-  reset();
+  reset(false);
   elements.scenario.disabled = false;
   elements.refresh.disabled = false;
   new ResizeObserver(renderChart).observe(elements.chart);
