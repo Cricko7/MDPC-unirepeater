@@ -142,12 +142,15 @@ const monitoringTelemetry = (() => {
     try {
       const choice = JSON.parse(localStorage.getItem(scenarioKey));
       if (validScenario(choice?.id) && Number.isFinite(choice.changedAt)) return choice;
+      if (choice?.id === "server" && Number.isFinite(choice.changedAt)) {
+        return { id: defaultScenario, changedAt: choice.changedAt, followsDefault: true };
+      }
       const previous = JSON.parse(localStorage.getItem(historyStorageKey))?.scenario;
       if (validScenario(previous) && previous !== "mixed") return chooseScenario(previous);
     } catch {
       // Use the demo default when storage is unavailable.
     }
-    return { id: defaultScenario, changedAt: 0 };
+    return { id: defaultScenario, changedAt: 0, followsDefault: true };
   }
 
   function chooseScenario(id) {
@@ -157,7 +160,7 @@ const monitoringTelemetry = (() => {
     } catch {
       // The selection still works on the current page.
     }
-    return choice;
+    return id === "server" ? { id: defaultScenario, changedAt: choice.changedAt, followsDefault: true } : choice;
   }
 
   function readSnapshot({ id: scenario, changedAt } = readScenario()) {

@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="styles.css?v=alarm-severity-1">
   <link rel="stylesheet" href="../assets/toasts.css?v=2">
   <script src="../assets/toasts.js?v=3" defer></script>
-  <script src="../assets/site-config.js?v=1" defer></script>
-  <script src="telemetry.js?v=4" defer></script>
-  <script src="monitor.js?v=alarm-event-1" defer></script>
+  <script src="../assets/site-config.js?v=2" defer></script>
+  <script src="telemetry.js?v=5" defer></script>
+  <script src="monitor.js?v=site-settings-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -25,6 +25,7 @@
       <div class="controls">
         <label for="scenario">Сценарий</label>
         <select id="scenario" disabled>
+          <option value="server">По настройкам сайта</option>
           <option value="mixed">Деградация и потеря связи</option>
           <option value="normal">Штатная работа</option>
           <option value="offline">Репитер отключён</option>

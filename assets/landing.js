@@ -129,9 +129,9 @@ function showPointTelemetry() {
   noAlarms.hidden = alarms.length > 0;
 }
 
-function syncMonitoring(choice) {
+function syncMonitoring(choice = readScenario()) {
   snapshot = readSnapshot(choice);
-  scenarioSelect.value = snapshot.scenario;
+  scenarioSelect.value = choice.followsDefault ? "server" : snapshot.scenario;
   for (const marker of map.querySelectorAll("[data-point]")) {
     const id = marker.dataset.point;
     const repeater = id === "R1";
@@ -228,10 +228,8 @@ window.addEventListener("pageshow", event => {
 
 siteDefaults.then(defaults => {
   setDefaultScenario(defaults.scenario);
-  const validLinkedScenario = Array.from(scenarioSelect.options).some(option => option.value === linkedScenario);
-  const sharedScenario = validLinkedScenario && linkedScenario !== readScenario().id
-    ? chooseScenario(linkedScenario)
-    : undefined;
+  const sharedScenario = ["mixed", "normal", "offline"].includes(linkedScenario)
+    ? chooseScenario(linkedScenario) : undefined;
   if (Object.hasOwn(points, linkedPoint)) {
     selectedPoint = linkedPoint;
     if (selectedPoint !== "R1") {
@@ -242,4 +240,8 @@ siteDefaults.then(defaults => {
   syncMonitoring(sharedScenario);
   showPoint(selectedPoint);
   scenarioSelect.disabled = false;
+  watchSiteDefaults(defaults, settings => {
+    setDefaultScenario(settings.scenario);
+    refreshMonitoring();
+  });
 });

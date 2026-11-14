@@ -43,7 +43,7 @@ function carrierRow(operator) {
     fields[key].setAttribute("aria-label", `${operator.name}: ${label}`);
   }
   resetCarrier(fields, operator);
-  return { row, fields, name: operator.name, defaults: operator };
+  return { row, fields, name: operator.name };
 }
 
 function resetCarrier(fields, operator) {
@@ -613,15 +613,18 @@ function setupNamedScenarios(operators, currentSettings, applySettings, saveAndR
   });
 }
 
-function setup(scenario) {
-  const operators = scenario.operators.map(carrierRow);
+function setup(scenario, siteSettings) {
+  const defaults = {
+    operators: siteSettings.calculator?.operators ?? scenario.operators,
+    gsm: siteSettings.calculator?.gsm ?? scenario.gsm ?? { band: "1800", arfcn: 698 },
+  };
+  const operators = defaults.operators.map(carrierRow);
   carrierRows.replaceChildren(...operators.map(operator => operator.row));
   const gsmBand = document.getElementById("gsm-band");
   const gsmArfcn = document.getElementById("gsm-arfcn");
-  const gsmDefaults = scenario.gsm ?? { band: "1800", arfcn: 698 };
   function resetGsm() {
-    gsmBand.value = gsmDefaults.band;
-    gsmArfcn.value = gsmDefaults.arfcn;
+    gsmBand.value = defaults.gsm.band;
+    gsmArfcn.value = defaults.gsm.arfcn;
   }
   resetGsm();
 
@@ -641,7 +644,9 @@ function setup(scenario) {
         : gsmBand.value === "1800" ? 698 : 62;
     }
   }
-  applySettings(loadBudgetSettings());
+  const savedSettings = loadBudgetSettings();
+  let hasLocalSettings = savedSettings.version === 1;
+  applySettings(savedSettings);
 
   function currentSettings() {
     const carriers = Object.fromEntries(operators.map(({ fields, name }) => [name, {
@@ -654,6 +659,7 @@ function setup(scenario) {
   }
 
   function saveAndRender() {
+    hasLocalSettings = true;
     let saved = true;
     try {
       localStorage.setItem(settingsKey, JSON.stringify(currentSettings()));
@@ -662,6 +668,12 @@ function setup(scenario) {
     }
     render();
     return saved;
+  }
+
+  function renderDefaults() {
+    for (const [index, { fields }] of operators.entries()) resetCarrier(fields, defaults.operators[index]);
+    resetGsm();
+    render();
   }
 
   const target = scenario.rsrp_target_dbm;
@@ -817,16 +829,27 @@ function setup(scenario) {
     }
   });
   resetButton.addEventListener("click", () => {
-    for (const { fields, defaults } of operators) resetCarrier(fields, defaults);
-    resetGsm();
-    settingsStatus.textContent = "";
-    saveAndRender();
-    showToast("Настройки калькулятора сброшены.");
+    hasLocalSettings = false;
+    try {
+      localStorage.removeItem(settingsKey);
+      settingsStatus.textContent = "";
+    } catch {
+      settingsStatus.textContent = "Хранилище браузера недоступно.";
+    }
+    renderDefaults();
+    showToast("Восстановлены исходные настройки калькулятора.");
   });
   render();
   setupNamedScenarios(operators, currentSettings, applySettings, saveAndRender, scenarioComparison(operators, scenario));
   resetButton.disabled = false;
   importButton.disabled = false;
+  watchSiteDefaults(siteSettings, settings => {
+    if (!settings.calculator) return;
+    if (JSON.stringify(settings.calculator) === JSON.stringify(defaults)) return;
+    defaults.operators = settings.calculator.operators;
+    defaults.gsm = settings.calculator.gsm;
+    if (!hasLocalSettings) renderDefaults();
+  });
 }
 
 fetch("../tools/mdpc-scenario.json")
@@ -835,12 +858,7 @@ fetch("../tools/mdpc-scenario.json")
     return response.json();
   })
   .then(async scenario => {
-    const { calculator } = await siteDefaults;
-    if (calculator) {
-      scenario.operators = calculator.operators;
-      scenario.gsm = calculator.gsm;
-    }
-    setup(scenario);
+    setup(scenario, await siteDefaults);
   })
   .catch(() => {
     errors.textContent = "Расчётный сценарий не загрузился. Откройте калькулятор через GitHub Pages или локальный HTTP-сервер.";

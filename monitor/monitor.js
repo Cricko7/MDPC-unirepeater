@@ -80,7 +80,6 @@ const openAlarms = new Map(alarmHistory.filter(entry => entry.recoveredAt === nu
   .map(entry => [alarmKey(entry), entry]));
 
 let scenario = readScenario().id;
-elements.scenario.value = scenario;
 let selectedZone = readSelectedZone();
 let selectedMetric = "rsrp";
 let samples = [];
@@ -428,25 +427,24 @@ function restartTimer() {
   timer = setInterval(nextSample, interval);
 }
 
-function applyScenario(id) {
+function applyScenario({ id, followsDefault }) {
+  elements.scenario.value = followsDefault ? "server" : id;
   if (scenario === id) return;
   scenario = id;
-  elements.scenario.value = id;
   reset();
   elements.announcement.textContent = "Тестовый сценарий изменён.";
 }
 
 elements.scenario.addEventListener("change", () => {
-  const { id } = chooseScenario(elements.scenario.value);
-  applyScenario(id);
+  applyScenario(chooseScenario(elements.scenario.value));
 });
 window.addEventListener("storage", event => {
-  if (event.key === scenarioKey || event.key === null) applyScenario(readScenario().id);
+  if (event.key === scenarioKey || event.key === null) applyScenario(readScenario());
   if (event.key === selectedZoneKey || event.key === null) syncSelectedZone();
 });
 window.addEventListener("pageshow", event => {
   if (!event.persisted) return;
-  applyScenario(readScenario().id);
+  applyScenario(readScenario());
   syncSelectedZone();
 });
 elements.refresh.addEventListener("click", () => {
@@ -531,10 +529,15 @@ for (const button of metricButtons) {
 }
 siteDefaults.then(defaults => {
   setDefaultScenario(defaults.scenario);
-  scenario = readScenario().id;
-  elements.scenario.value = scenario;
+  const choice = readScenario();
+  scenario = choice.id;
+  elements.scenario.value = choice.followsDefault ? "server" : scenario;
   reset(false);
   elements.scenario.disabled = false;
   elements.refresh.disabled = false;
   new ResizeObserver(renderChart).observe(elements.chart);
+  watchSiteDefaults(defaults, settings => {
+    setDefaultScenario(settings.scenario);
+    applyScenario(readScenario());
+  });
 });
