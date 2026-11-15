@@ -19,12 +19,10 @@ flock 9
 
 compose_environment=$(docker compose config --environment)
 password_file=
-port=8080
 image=
 while IFS= read -r entry; do
   case "$entry" in
     DATARK_ADMIN_PASSWORD_FILE=*) password_file=${entry#*=} ;;
-    DATARK_PORT=*) port=${entry#*=} ;;
     DATARK_IMAGE=*) image=${entry#*=} ;;
   esac
 done <<< "$compose_environment"
@@ -76,6 +74,11 @@ else
 fi
 
 docker compose up -d --wait --wait-timeout 90 --pull never web
-printf '\nDatark is ready at http://127.0.0.1:%s/\n' "${port:-8080}"
-printf 'Health: http://127.0.0.1:%s/healthz\n' "${port:-8080}"
+address=$(docker compose port web 8080)
+if [[ ! $address =~ ^127\.0\.0\.1:[1-9][0-9]*$ ]]; then
+  printf 'Could not determine the published address of Datark.\n' >&2
+  exit 1
+fi
+printf '\nDatark is ready at http://%s/\n' "$address"
+printf 'Health: http://%s/healthz\n' "$address"
 printf 'Admin password file: %s\n' "$password_file"
