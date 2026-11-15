@@ -29,8 +29,11 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
+/.idea/
 # .vscode/
+
+# Local screenshots, recordings and generated reports
+/output/
 
 # Datark server credentials
 /deploy/admin-password
