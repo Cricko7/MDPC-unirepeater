@@ -88,4 +88,5 @@ bundle.addEventListener("load", () => SwaggerUIBundle({
     return response;
   },
 }));
-document.head.append(stylesheet, bundle);
+document.querySelector("#datark-swagger-theme").before(stylesheet);
+document.head.append(bundle);

@@ -3,20 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#202430">
   <title>Датарк · API</title>
-  <script src="swagger-init.js?v=redact-curl-1" defer></script>
+  <link rel="stylesheet" href="/monitor/styles.css">
+  <link id="datark-swagger-theme" rel="stylesheet" href="datark-swagger.css?v=1">
+  <script src="swagger-init.js?v=datark-theme-1" defer></script>
 </head>
-<body>
-  <nav class="swagger-ui">
-    <div class="wrapper">
-      <p><a href="../">Админ-панель</a> · <a href="openapi.json">OpenAPI JSON</a></p>
+<body class="api-console">
+  <header class="topbar">
+    <div class="shell topbar-inner api-topbar">
+      <a class="brand" href="/">
+        <span class="brand-icon"><img src="/assets/datark-logo.png" alt=""></span>
+        <strong>Датарк</strong>
+      </a>
+      <nav class="api-nav" aria-label="Навигация API">
+        <a href="../">Админ-панель</a>
+        <a href="openapi.json">OpenAPI JSON</a>
+      </nav>
       <form method="post" action="/admin/logout"><button type="submit">Выйти</button></form>
+    </div>
+  </header>
+  <main class="shell api-content">
+    <aside class="api-tools" aria-label="Работа с телеметрией">
       <p>Чтобы изменить показания зоны, выполните <code>PUT /admin/telemetry</code>. Публичные <code>GET</code> читают данные.</p>
       <p id="write-feedback" role="status" hidden></p>
-      <p><a id="monitor-link" href="/monitor/">Открыть мониторинг</a> · <a href="/monitor/?scenario=server">Мониторинг по настройкам сайта</a></p>
-    </div>
-  </nav>
-  <p id="swagger-loading" role="status">Загрузка Swagger… <a href="../#telemetry-panel">Открыть форму телеметрии</a></p>
-  <main id="swagger-ui"></main>
+      <p class="api-nav"><a id="monitor-link" href="/monitor/">Открыть мониторинг</a><a href="/monitor/?scenario=server">Мониторинг по настройкам сайта</a></p>
+    </aside>
+    <p id="swagger-loading" role="status">Загрузка Swagger… <a href="../#telemetry-panel">Открыть форму телеметрии</a></p>
+    <div id="swagger-ui"></div>
+  </main>
 </body>
 </html>
