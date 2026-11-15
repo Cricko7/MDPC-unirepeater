@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="styles.css?v=datark-design-1">
   <link rel="stylesheet" href="budget.css?v=datark-design-1">
   <link rel="stylesheet" href="../assets/toasts.css">
+  <link rel="icon" type="image/png" href="../assets/datark-logo.png">
+  <link rel="stylesheet" href="../assets/navigation.css?v=1">
   <script src="../assets/toasts.js" defer></script>
   <script src="../assets/site-config.js?v=2" defer></script>
   <script src="budget.js?v=server-defaults-3" defer></script>
@@ -16,7 +18,11 @@
   <header class="topbar">
     <div class="shell topbar-inner">
       <a class="brand" href="../"><span class="brand-icon"><img src="../assets/datark-logo.png" alt=""></span><div><strong>МЦОД Датарк</strong><span>Проектирование покрытия</span></div></a>
-      <a href="index.html">К мониторингу</a>
+      <nav class="nav-tabs" aria-label="Основная навигация">
+        <a href="../#layout"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#map"></use></svg>Схема МЦОД</a>
+        <a href="./"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#monitor"></use></svg>Мониторинг</a>
+        <a href="budget.html" aria-current="page"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#calculator"></use></svg>Калькулятор</a>
+      </nav>
     </div>
   </header>
   <main class="shell budget">

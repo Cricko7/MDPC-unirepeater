@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="../monitor/budget.css">
   <link rel="stylesheet" href="admin.css?v=telemetry-1">
   <link rel="stylesheet" href="../assets/toasts.css">
+  <link rel="icon" type="image/png" href="/assets/datark-logo.png">
+  <link rel="stylesheet" href="/assets/navigation.css?v=1">
   <script src="../assets/toasts.js" defer></script>
   <script src="admin.js" defer></script>
   <script src="../monitor/telemetry.js?v=6" defer></script>
@@ -17,8 +19,11 @@
   <main class="shell">
     <header class="page-heading">
       <div><h1>Настройки демонстрации</h1><p>Стартовые значения для новых посетителей. Личные настройки пользователей сохраняются в их браузерах.</p></div>
-      <nav aria-label="Ссылки"><a href="api/">Swagger UI</a> · <a href="../">На главную</a></nav>
-      <form method="post" action="/admin/logout"><button type="submit">Выйти</button></form>
+      <nav class="nav-tabs" aria-label="Навигация админ-панели">
+        <a href="/"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#home"></use></svg>На главную</a>
+        <a href="api/"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#code"></use></svg>Swagger UI</a>
+        <form method="post" action="/admin/logout"><button type="submit"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#exit"></use></svg>Выйти</button></form>
+      </nav>
     </header>
     <form id="settings" class="panel">
       <fieldset disabled>

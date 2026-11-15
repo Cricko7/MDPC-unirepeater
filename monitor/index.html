@@ -7,6 +7,8 @@
   <title>Мониторинг связи · МЦОД Датарк</title>
   <link rel="stylesheet" href="styles.css?v=alarm-severity-1">
   <link rel="stylesheet" href="../assets/toasts.css?v=2">
+  <link rel="icon" type="image/png" href="../assets/datark-logo.png">
+  <link rel="stylesheet" href="../assets/navigation.css?v=1">
   <script src="../assets/toasts.js?v=3" defer></script>
   <script src="../assets/site-config.js?v=2" defer></script>
   <!-- SERVER_TELEMETRY -->
@@ -17,6 +19,11 @@
   <header class="topbar">
     <div class="shell topbar-inner">
       <a class="brand" href="../"><span class="brand-icon"><img src="../assets/datark-logo.png" alt=""></span><div><strong>МЦОД Датарк</strong><span>LTE Band 1 · мониторинг связи</span></div></a>
+      <nav class="nav-tabs" aria-label="Основная навигация">
+        <a href="../#layout"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#map"></use></svg>Схема МЦОД</a>
+        <a href="./" aria-current="page"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#monitor"></use></svg>Мониторинг</a>
+        <a href="budget.html"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#calculator"></use></svg>Калькулятор</a>
+      </nav>
       <span class="demo"><i></i> Тестовые данные</span>
     </div>
   </header>
@@ -53,11 +60,10 @@
       </div>
     </div>
     <div class="summary" id="summary" aria-label="Состояние системы"></div>
-    <p class="budget-link"><a href="budget.html">Калькулятор покрытия для пяти операторов</a></p>
     <section class="panel floor-panel" aria-labelledby="floor-title">
       <header class="panel-heading">
         <div><h2 id="floor-title">План МЦОД</h2><p>Выберите зону на плане, чтобы посмотреть её показатели и тревоги.</p></div>
-        <a href="../docs/mdpc-radio-layout.png" target="_blank" rel="noopener">Полная схема ↗</a>
+        <a href="../docs/mdpc-radio-layout.png" target="_blank" rel="noopener" class="icon-label"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#doc"></use></svg>Полная схема</a>
       </header>
       <div class="floor-grid">
         <div>
@@ -96,15 +102,15 @@
           <div class="trend-heading">
             <div><h3 id="trend-title"></h3><p>Последние 8 отсчётов</p></div>
             <div class="toggle" role="group" aria-label="Метрика графика">
-              <button type="button" data-metric="rsrp" aria-pressed="true">RSRP</button>
-              <button type="button" data-metric="sinr" aria-pressed="false">SINR</button>
+              <button class="icon-label" type="button" data-metric="rsrp" aria-pressed="true"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#signal"></use></svg>RSRP</button>
+              <button class="icon-label" type="button" data-metric="sinr" aria-pressed="false"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#wave"></use></svg>SINR</button>
             </div>
           </div>
           <div class="chart" id="chart"></div>
         </section>
       </section>
       <section class="panel alarms" aria-labelledby="alarms-title">
-        <header class="panel-heading"><div><h2 id="alarms-title">Активные тревоги</h2><p><a href="#alarm-history">Перейти к журналу ↓</a></p></div><span class="alarm-count" id="alarm-count"></span></header>
+        <header class="panel-heading"><div><h2 id="alarms-title">Активные тревоги</h2><p><a class="icon-label" href="#alarm-history"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="../assets/navigation-icons.svg#bell"></use></svg>Перейти к журналу</a></p></div><span class="alarm-count" id="alarm-count"></span></header>
         <ul id="alarms"></ul>
         <p class="alarm-rule">Деградация фиксируется после трёх отсчётов ниже порога. Потеря телеметрии — после 60 секунд без данных.</p>
       </section>

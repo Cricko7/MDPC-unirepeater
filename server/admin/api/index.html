@@ -6,7 +6,9 @@
   <meta name="theme-color" content="#202430">
   <title>Датарк · API</title>
   <link rel="stylesheet" href="/monitor/styles.css">
-  <link id="datark-swagger-theme" rel="stylesheet" href="datark-swagger.css?v=1">
+  <link id="datark-swagger-theme" rel="stylesheet" href="datark-swagger.css?v=2">
+  <link rel="icon" type="image/png" href="/assets/datark-logo.png">
+  <link rel="stylesheet" href="/assets/navigation.css?v=1">
   <script src="swagger-init.js?v=datark-theme-1" defer></script>
 </head>
 <body class="api-console">
@@ -16,18 +18,18 @@
         <span class="brand-icon"><img src="/assets/datark-logo.png" alt=""></span>
         <strong>Датарк</strong>
       </a>
-      <nav class="api-nav" aria-label="Навигация API">
-        <a href="../">Админ-панель</a>
-        <a href="openapi.json">OpenAPI JSON</a>
+      <nav class="nav-tabs" aria-label="Навигация API">
+        <a href="../"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#admin"></use></svg>Админ-панель</a>
+        <a href="openapi.json"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#doc"></use></svg>OpenAPI JSON</a>
       </nav>
-      <form method="post" action="/admin/logout"><button type="submit">Выйти</button></form>
+      <form class="nav-tabs" method="post" action="/admin/logout"><button type="submit"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#exit"></use></svg>Выйти</button></form>
     </div>
   </header>
   <main class="shell api-content">
     <aside class="api-tools" aria-label="Работа с телеметрией">
       <p>Чтобы изменить показания зоны, выполните <code>PUT /admin/telemetry</code>. Публичные <code>GET</code> читают данные.</p>
       <p id="write-feedback" role="status" hidden></p>
-      <p class="api-nav"><a id="monitor-link" href="/monitor/">Открыть мониторинг</a><a href="/monitor/?scenario=server">Мониторинг по настройкам сайта</a></p>
+      <p class="api-nav"><a class="icon-label" id="monitor-link" href="/monitor/"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#monitor"></use></svg>Открыть мониторинг</a><a class="icon-label" href="/monitor/?scenario=server"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#signal"></use></svg>Мониторинг по настройкам сайта</a></p>
     </aside>
     <p id="swagger-loading" role="status">Загрузка Swagger… <a href="../#telemetry-panel">Открыть форму телеметрии</a></p>
     <div id="swagger-ui"></div>

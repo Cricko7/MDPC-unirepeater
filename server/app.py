@@ -467,7 +467,10 @@ class Handler(BaseHTTPRequestHandler):
         if root == PUBLIC and file == PUBLIC / "index.html":
             content = content.replace(
                 b"<!-- SERVER_NAVIGATION -->",
-                '<a href="#sms-tests">Испытания SMS</a>'.encode(),
+                (
+                    '<a href="#sms-tests"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="assets/navigation-icons.svg#sms"></use></svg>Испытания SMS</a>'
+                    '<a href="/admin/" class="nav-admin"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="assets/navigation-icons.svg#admin"></use></svg>Админ-панель</a>'
+                ).encode(),
                 1,
             )
         self.send_payload(200, content, media_type, headers)

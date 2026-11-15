@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Вход · Датарк</title>
+  <link rel="icon" type="image/png" href="/assets/datark-logo.png">
+  <link rel="stylesheet" href="/assets/navigation.css?v=1">
   <style>
     :root { color-scheme: dark; font-family: Inter, "Segoe UI", sans-serif; background: #202430; color: #fff; }
     main { max-width: 25rem; margin: 9vh auto; padding: 1.5rem; }
@@ -24,10 +26,10 @@
       <input type="hidden" name="next" value="{{destination}}">
       <label>Логин <input name="username" autocomplete="username" required></label>
       <label>Пароль <input type="password" name="password" autocomplete="current-password" required></label>
-      <button type="submit">Войти</button>
+      <button class="icon-label" type="submit"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#key"></use></svg>Войти</button>
     </form>
-    <p><a href="https://github.com/Cricko7/MDPC-unirepeater/blob/main/docs/deployment.md#%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0-api-%D1%87%D0%B5%D1%80%D0%B5%D0%B7-swagger-ui">Логин и пароль админ-панели</a></p>
-    <p><a href="/">На главную</a></p>
+    <p><a href="https://github.com/Cricko7/MDPC-unirepeater/blob/main/docs/deployment.md#%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%BA%D0%B0-api-%D1%87%D0%B5%D1%80%D0%B5%D0%B7-swagger-ui" class="icon-label"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#doc"></use></svg>Логин и пароль админ-панели</a></p>
+    <p><a href="/" class="icon-label"><svg class="nav-icon" aria-hidden="true" focusable="false"><use href="/assets/navigation-icons.svg#home"></use></svg>На главную</a></p>
   </main>
 </body>
 </html>

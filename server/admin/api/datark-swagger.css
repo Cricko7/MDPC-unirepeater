@@ -83,5 +83,7 @@
 @media (max-width: 600px) {
   .api-topbar .api-nav { order: 1; width: 100%; }
   .api-console .swagger-ui .opblock-summary-description { display: none; }
+  .api-console .swagger-ui :is(.opblock-tag a, .opblock-summary-control, .opblock-summary-path) { min-width: 0; }
+  .api-console .swagger-ui .opblock-tag a { overflow-wrap: anywhere; }
   .api-console .swagger-ui .opblock .opblock-section-header { flex-wrap: wrap; gap: 8px; }
 }
