@@ -17,26 +17,46 @@
 
 [Открыть сайт Датарк на VPS](https://72.56.14.198/)
 
+[Демо использования Датарка на VPS · 41 с, WebM](docs/screenshots/vps-demo.webm). В записи показаны интерактивная схема, испытания SMS, журнал тревог, калькулятор, админ-панель и запрос телеметрии через Swagger.
+
 <details>
-<summary>Скриншоты сайта и Swagger на VPS</summary>
+<summary>Главная страница</summary>
 
-**Главная и интерактивная схема МЦОД**
+Интерактивная схема МЦОД, результаты испытаний аварийных SMS и инструменты проекта.
 
-![Главная страница с интерактивной схемой и карточкой зоны A3](docs/screenshots/vps-home.jpg)
+![Главная страница Датарка с интерактивным планом и результатами испытаний SMS](docs/screenshots/vps-home.jpg)
 
-**Мониторинг связи и журнал тревог**
+</details>
+<details>
+<summary>Мониторинг связи</summary>
 
-![Мониторинг пяти зон с показаниями RSRP и SINR и журналом тестовых тревог](docs/screenshots/vps-monitoring.jpg)
+![Состояние репитера, план пяти зон, график RSRP и SINR, активные тревоги и журнал](docs/screenshots/vps-monitoring.jpg)
 
-**Калькулятор бюджета радиолинии**
+</details>
+<details>
+<summary>Калькулятор бюджета радиолинии</summary>
 
-![Параметры пяти LTE-несущих, карта запаса RSRP и проверка тестового GSM-канала](docs/screenshots/vps-link-budget.jpg)
+![Настройка LTE-несущих, сравнение сценариев, карта и таблица покрытия, проверка GSM-канала](docs/screenshots/vps-link-budget.jpg)
 
-**Swagger UI на VPS**
+</details>
+<details>
+<summary>Вход в админ-панель</summary>
 
-Все семь запросов вернули `200 OK`.
+![Форма входа в Датарк с пустыми полями и ссылкой на документацию](docs/screenshots/vps-login.jpg)
 
-![Результаты семи запросов к API Датарка в Swagger UI](docs/screenshots/vps-swagger.png)
+</details>
+<details>
+<summary>Админ-панель</summary>
+
+![Настройки сценария мониторинга, LTE и GSM, редактор телеметрии зоны](docs/screenshots/vps-admin.jpg)
+
+</details>
+<details>
+<summary>Swagger UI в тёмной теме</summary>
+
+Все семь запросов вернули `200 OK`. Команды cURL проверены на отсутствие заголовка `Authorization`.
+
+![Полный снимок Swagger UI с результатами семи запросов и разделом Schemas](docs/screenshots/vps-swagger.png)
 
 </details>
 
