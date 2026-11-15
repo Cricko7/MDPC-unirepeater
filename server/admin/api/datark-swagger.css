@@ -1,6 +1,7 @@
 .api-console {
   --api-input: #1b1f2a;
   --api-action: linear-gradient(108deg, #f78361, #f54b64);
+  --api-type: #b9baff;
 }
 
 .api-topbar { justify-content: flex-start; flex-wrap: wrap; padding-block: 12px; }
@@ -79,6 +80,43 @@
 .api-console .swagger-ui .model-toggle::after { filter: invert(1); }
 .api-console .swagger-ui :is(.opblock-summary-path, .request-url, .model-title) { overflow-wrap: anywhere; }
 .api-console .swagger-ui .opblock-body { overflow-x: auto; }
+
+/* Swagger sets explicit foreground colors for operation labels and JSON Schema 2020-12. */
+.api-console .swagger-ui .opblock .opblock-section-header :is(h4, label),
+.api-console .swagger-ui .examples-select__section-label,
+.api-console .swagger-ui .json-schema-2020-12__title,
+.api-console .swagger-ui .json-schema-2020-12 :is(.json-schema-2020-12-keyword__name--primary,
+  .json-schema-2020-12-keyword__value--primary, .json-schema-2020-12-json-viewer__name,
+  .json-schema-2020-12-json-viewer__value) {
+  color: #fff;
+}
+.api-console .swagger-ui .json-schema-2020-12 :is(.json-schema-2020-12-keyword--description,
+  .json-schema-2020-12-keyword__name--secondary, .json-schema-2020-12-keyword__value--secondary,
+  .json-schema-2020-12__attribute--muted, .json-schema-2020-12-json-viewer__name--secondary,
+  .json-schema-2020-12-json-viewer__value--secondary) {
+  color: var(--muted);
+}
+.api-console .swagger-ui .json-schema-2020-12__attribute { color: var(--api-type); }
+.api-console .swagger-ui .json-schema-2020-12 .json-schema-2020-12__attribute--warning,
+.api-console .swagger-ui .json-schema-2020-12-property--required .json-schema-2020-12__title::after,
+.api-console .swagger-ui .parameter__name.required span,
+.api-console .swagger-ui .parameter__name.required::after {
+  color: var(--red);
+}
+.api-console .swagger-ui .json-schema-2020-12 :is(.json-schema-2020-12-keyword__value--warning,
+  .json-schema-2020-12-json-viewer__value--warning) { color: var(--red); border-color: var(--red); }
+.api-console .swagger-ui :is(.json-schema-2020-12-accordion, .json-schema-2020-12-expand-deep-button) {
+  background: transparent;
+  color: var(--muted);
+}
+.api-console .swagger-ui .json-schema-2020-12-expand-deep-button:hover { color: var(--accent); }
+.api-console .swagger-ui .json-schema-2020-12__constraint--string { background: var(--amber); color: #211923; }
+.api-console .swagger-ui :is(.authorization__btn, .opblock-control-arrow, .expand-operation,
+  .models-control, .json-schema-2020-12-accordion) svg path { fill: currentColor; }
+.api-console .swagger-ui .response-control-media-type--accept-controller select { border-color: var(--green); }
+.api-console .swagger-ui .response-control-media-type--accept-controller .response-control-media-type__accept-message {
+  color: var(--green);
+}
 
 @media (max-width: 600px) {
   .api-topbar .api-nav { order: 1; width: 100%; }
